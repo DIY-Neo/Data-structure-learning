@@ -1,0 +1,166 @@
+#pragma once
+#include "dictionaryADT.h"
+#include <algorithm>
+
+template<typename K, typename E>
+class sortedArrayList :public dictionary<K, E>
+{
+public:
+	sortedArrayList(int len = 100);
+	sortedArrayList(const sortedArrayList<K, E>& sortedArr);
+	~sortedArrayList();
+
+	virtual bool empty()const { return arrSize == 0; }
+	virtual int size()const { return arrSize; }
+	virtual std::pair<K, E>* find(const K&)const;
+	virtual bool erase(const K&);
+	virtual bool insert(const std::pair<K, E>&);
+
+	void output(std::ostream& os)const;
+
+private:
+	std::pair<K, E>* arr;
+	int arrLen;
+	int arrSize;
+};
+
+template<typename K, typename E>
+inline sortedArrayList<K, E>::sortedArrayList(int len)
+	:arrLen(len), arrSize(0)
+{
+	arr = new std::pair<K, E>[arrLen];
+}
+
+template<typename K, typename E>
+inline sortedArrayList<K, E>::sortedArrayList(const sortedArrayList<K, E>& sortedArr)
+	:arrLen(sortedArr.arrLen), arrSize(sortedArr.arrSize)
+{
+	arr = new std::pair<K, E>[arrLen];
+	for (int i = 0; i < arrSize; i++)
+		arr[i] = sortedArr.arr[i];
+}
+
+template<typename K, typename E>
+inline sortedArrayList<K, E>::~sortedArrayList()
+{
+	delete[] arr;
+}
+
+template<typename K, typename E>
+inline std::pair<K, E>* sortedArrayList<K, E>::find(const K& _key)const
+{
+	if (arrSize == 0)
+		return NULL;
+	int head = 0;
+	int tail = arrSize;
+	int target = (head + tail) / 2;
+	while (true)
+	{
+		if (arr[target].first == _key)
+			return arr + target;
+		else
+		{
+			if (arr[target].first < _key)
+				head = target + 1;
+			else
+				tail = target;
+		}
+		target = (head + tail) / 2;
+		if (head >= tail) break;
+	}
+	return NULL;
+}
+
+template<typename K, typename E>
+inline bool sortedArrayList<K, E>::erase(const K& _key)
+{
+	if (arrSize > 100 && arrSize < arrLen / 4)
+	{
+		std::pair<K, E>* temp = new std::pair<K, E>[arrLen / 2];
+		std::copy(arr, arr + arrSize, temp);
+		delete[] arr;
+		arr = temp;
+		arrLen /= 2;
+	}
+	if (arrSize == 0)
+		return false;
+	int head = 0;
+	int tail = arrSize;
+	int target = (head + tail) / 2;
+	bool result = false;
+	while (true)
+	{
+		if (arr[target].first == _key)
+		{
+			result = true;
+			break;
+		}
+		else
+		{
+			if (arr[target].first < _key)
+				head = target + 1;
+			else
+				tail = target;
+		}
+		target = (head + tail) / 2;
+		if (head >= tail) break;
+	}
+	if (!result)
+		return result;
+	else
+	{
+		std::copy(arr + target + 1, arr + arrSize, arr + target);
+		arrSize--;
+		return result;
+	}
+}
+
+template<typename K, typename E>
+inline bool sortedArrayList<K, E>::insert(const std::pair<K, E>& _item)
+{
+	if (arrSize == arrLen)
+	{
+		std::pair<K, E>* temp = new std::pair<K, E>[arrLen * 2];
+		std::copy(arr, arr + arrSize, temp);
+		arrLen *= 2;
+		delete[] arr;
+		arr = temp;
+	}
+	if (arrSize == 0)
+	{
+		arrSize++;
+		arr[0] = std::pair<K, E>(_item.first, _item.second);
+		return true;
+	}
+	int head = 0;
+	int tail = arrSize;
+	int target = (head + tail) / 2;
+	while (true)
+	{
+		if (arr[target].first == _item.first)
+		{
+			return false;
+		}
+		else
+		{
+			if (arr[target].first < _item.first)
+				head = target + 1;
+			else
+				tail = target;
+		}
+		target = (head + tail) / 2;
+		if (head >= tail) break;
+	}
+	for (int i = arrSize; i > target; i--)
+		arr[i] = arr[i - 1];
+	arr[target] = _item;
+	arrSize++;
+	return true;
+}
+
+template<typename K, typename E>
+inline void sortedArrayList<K, E>::output(std::ostream & os) const
+{
+	for (int i = 0; i < arrSize; i++)
+		os << arr[i].first << "\t" << arr[i].second << "\n";
+}
