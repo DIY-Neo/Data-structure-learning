@@ -1,0 +1,129 @@
+#pragma once
+#include <iostream>
+#include "dictionaryADT.h"
+
+template<typename K, typename E>
+class sortedChain :public dictionary<K, E>
+{
+public:
+	struct chainNode
+	{
+		std::pair<K, E> data;
+		chainNode* next;
+		chainNode() :next(NULL) {}
+		chainNode(const std::pair<K, E>& _dat, chainNode* nxt = NULL)
+			:data(_dat), next(nxt) {}
+	};
+
+	sortedChain();
+	sortedChain(const sortedChain<K, E>& dic);
+	~sortedChain();
+
+	virtual bool empty()const { return dicSize == 0; }
+	virtual int size()const { return dicSize; }
+	virtual std::pair<K, E>* find(const K& _key)const;
+	virtual bool erase(const K& _key);
+	virtual bool insert(const std::pair<K, E>& _item);
+
+	void output(std::ostream& os)const;
+
+private:
+	chainNode* headNode;
+	int dicSize;
+};
+
+template<typename K, typename E>
+inline sortedChain<K, E>::sortedChain()
+	:dicSize(0)
+{
+	headNode = new chainNode();
+}
+
+template<typename K, typename E>
+inline sortedChain<K, E>::sortedChain(const sortedChain<K, E>& dic)
+	:dicSize(dic.dicSize)
+{
+	headNode = new chainNode();
+	chainNode* temp = dic.headNode->next;
+	chainNode* tmp = headNode;
+	while (temp != NULL)
+	{
+		tmp->next = new chainNode(temp->data);
+		tmp = tmp->next;
+		temp = temp->next;
+	}
+}
+
+template<typename K, typename E>
+inline sortedChain<K, E>::~sortedChain()
+{
+	chainNode* temp;
+	while (headNode != NULL)
+	{
+		temp = headNode;
+		headNode = headNode->next;
+		delete temp;
+	}
+}
+
+template<typename K, typename E>
+inline std::pair<K, E>* sortedChain<K, E>::find(const K& _key)const
+{
+	chainNode* temp = headNode->next;
+	while (temp != NULL)
+	{
+		if (temp->data.first == _key)
+			return &(temp->data);
+		temp = temp->next;
+	}
+	return NULL;
+}
+
+template<typename K, typename E>
+inline bool sortedChain<K, E>::erase(const K& _key)
+{
+	chainNode* temp = headNode;
+	bool result = false;
+	while (temp->next != NULL && temp->data.first < _key)
+	{
+		if (temp->next->data.first == _key)
+		{
+			chainNode* target = temp->next;
+			temp->next = temp->next->next;
+			delete target;
+			dicSize--;
+			result = true;
+		}
+	}
+	return result;
+}
+
+template<typename K, typename E>
+inline bool sortedChain<K, E>::insert(const std::pair<K, E>& _item)
+{
+	chainNode* temp = headNode;
+	while (temp->next != NULL && temp->next->data.first < _item.first)
+		temp = temp->next;
+	if (temp->next == NULL || temp->next->data.first != _item.first)
+	{
+		chainNode* t = temp->next;
+		temp->next = new chainNode(_item);
+		temp->next->next = t;
+		dicSize++;
+		return true;
+	}
+	else
+		return false;
+}
+
+template<typename K, typename E>
+inline void sortedChain<K, E>::output(std::ostream & os) const
+{
+	chainNode* temp = headNode->next;
+	while (temp != NULL)
+	{ 
+		os << temp->data.first << "\t" << temp->data.second << "\n";
+		temp = temp->next;
+	}
+	os << std::endl;
+}
