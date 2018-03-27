@@ -1,0 +1,186 @@
+######skipList.h######
+
+#pragma once
+#include "dictionaryADT.h"
+
+float Rand();
+
+template<typename K, typename E>
+class skipList :public dictionary<K, E>
+{
+public:
+	//basic unit definition
+	struct skipNode
+	{
+		std::pair<const K, E> element;
+		skipNode** next;
+		skipNode(const std::pair<const K, E>& thePair, int level)
+			:element(thePair) { next = new skipNode*[level + 1]; }
+		~skipNode() { delete next; }
+	};
+
+	virtual bool empty()const { return dSize == 0; }
+	virtual int size()const { return dSize; }
+	virtual std::pair<K, E>* find(const K&)const;
+	virtual bool erase(const K&);
+	virtual bool insert(const std::pair<K, E>&);
+
+	//constructor and destructor
+	skipList(K largeKey, int maxPairs, float prob);
+	~skipList();
+	
+protected:
+	int getLevel()const;
+	skipNode* search(const K& theKey)const;
+
+private:
+	float cutoff;
+	int levels;
+	int dSize;
+	int maxLevel;
+	K tailKey;
+	typename skipList<K, E>::skipNode* headNode;
+	typename skipList<K, E>::skipNode* tailNode;
+	typename skipList<K, E>::skipNode** last;
+};
+
+template<typename K, typename E>
+skipList<K, E>::skipList(K largeKey, int maxPairs, float prob)
+{
+	cutoff = prob;
+	maxlevel = int(ceilf(logf(maxPairs) / logf(1 / prob))) - 1;
+	levels = 0;
+	dSize = 0;
+	tailKey = largeKey;
+	
+	std::pair<K, E> tailPair;
+	tailPair.first = tailKey;
+	headNode = new skipNode(tailPair, maxlevel);
+	tailNode = new skipNode(tailPair, 0);
+	last = new skipNode*[maxlevel + 1];
+	for (int i = 0; i <= maxlevel; i++)
+		last[i] = tailNode;
+}
+
+template<typename K, typename E>
+skipList<K, E>::~skipList()
+{
+	delete[] last;
+	skipNode* temp;
+	while (headNode != tailNode)
+	{
+		temp = headNode;
+		headNode = headNode->next[0];
+		delete temp;
+	}
+	delete tailNode;
+}
+
+template<typename K, typename E>
+std::pair<K, E>* skipList<K, E>::find(const K& theKey)const
+{
+	if (theKey >= tailKey)
+		return NULL;
+	
+	skipNode* temp = headNode;
+	for (int i = maxlevel; i >= 0; i--)
+		while (temp->next[i]->element.first < theKey)
+			temp = temp->next[i];
+	if (temp->next[0]->element.first == theKey)
+		return &(temp->next[0]->element);
+	else
+		return NULL;
+}
+
+template<typename K,typename E>
+int skipList<K, E>::getLevel()const
+{
+	int level = 0;
+	while (level <= maxLevel && Rand() < cutoff)
+		level++;
+	return level;
+}
+
+template<typename K, typename E>
+typename skipList<K, E>::skipNode* skipList<K, E>::search(const K& theKey)const
+{
+	skipNode* temp = headNode;
+	for (int i = maxlevel; i >= 0; i--)
+		while (true)
+		{
+			if (temp->next[i]->element.first > theKey)
+			{
+				last[i] = temp;
+				break;
+			}
+			temp = temp->next[i];
+		}
+	return temp;
+}
+
+template<typename K, typename E>
+bool skipList<K, E>::insert(const std::pair<K, E>& thePair)
+{
+	if (theKey >= tailKey)
+		return false;
+	skipNode* temp = search(thePair.first);
+	if (temp->next[0]->element.first == thePair.first)
+	{
+		temp->next[0]->element.second = thePair.second;
+		return true;
+	}
+	else
+	{
+		int lv = getlevel();
+		skipNode* newNode = new skipNode(thePair, lv);
+		for (int i = 0; i <= lv; i++)
+		{ 
+			newNode->next[i] = last[i]->next[i];
+			last[i]->next[i] = newNode;
+		}
+		dSize++;
+		return true;
+	}
+}
+
+template<typename K, typename E>
+bool skipList<K, E>::erase(const K& theKey)
+{
+	if (theKey >= tailKey)
+		return false;
+	skipNode* temp = search(theKey);
+	if (temp->next[0]->element.first == theKey)
+	{
+		skipNode* target = temp->next[0];
+		int lv = 0;
+		while (++lv)
+		{ 
+			if (last[lv]->next[lv] != target)
+			{
+				lv--;
+				break;
+			}
+		}
+		for (int i = 0; i <= lv; i++)
+			last[i]->next[i] = target->next[i];
+		delete target;
+		dSize--;
+	}
+	else
+		return false;
+}
+
+######skipList.cpp#######
+
+#include "skipList.h"
+#include <random>
+#include <ctime>
+
+std::mt19937 gen(std::time(NULL));
+
+float Rand()
+{
+	unsigned int r = gen();
+	return (float)r / 0xFFFFFFFF;
+}
+
