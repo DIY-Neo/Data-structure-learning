@@ -1,0 +1,23 @@
+#pragma once
+#include <iostream>
+#include <stdexcept>
+
+template<typename K, typename E>
+class dictionary	//K is Key, E is Element
+{
+public:
+	virtual ~dictionary() {}
+	virtual bool empty()const = 0;
+	virtual int size()const = 0;
+	virtual std::pair<K, E>* find(const K&)const = 0;
+	virtual bool erase(const K&) = 0;
+	virtual bool insert(const std::pair<K, E>&) = 0;
+};
+
+class emptyDict :public std::exception
+{
+	explicit emptyDict(const char* s)
+		:exception(s) {}
+	explicit emptyDict(const std::string& str)
+		:exception(str.c_str()) {}
+};
