@@ -1,0 +1,321 @@
+#ifndef __CHAINBINARYTREE_H
+#define __CHAINBINARYTREE_H
+#include <iostream>
+#include "arrayQueue.h"
+
+template<typename T>
+class chainBinaryTree
+{
+public:
+	struct treeNode
+	{
+		T data;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode() :leftChild(NULL), rightChild(NULL) {}
+		treeNode(const T& dat, treeNode* l = NULL, treeNode* r = NULL) 
+			:data(dat), leftChild(l), rightChild(r) {}
+	};
+
+	chainBinaryTree() :root(NULL), treeSize(0) {}
+	chainBinaryTree(const chainBinaryTree<T>& theTree);
+	~chainBinaryTree();
+
+	int height()const { return height(root); }
+	int size()const { return treeSize; }
+	chainBinaryTree<T>& operator=(const chainBinaryTree<T>& theTree);
+	bool operator==(const chainBinaryTree<T>& theTree)const;
+	void output(std::ostream& os)const { out(os, root); }
+	void clear();
+
+	bool push(int tag, const T& theElement);
+	bool pop(int tag);
+
+	void preOrder(void(*pf)(treeNode*));
+	void inOrder(void(*pf)(treeNode*));
+	void postOrder(void(*pf)(treeNode*));
+	void levelOrder(void(*pf)(treeNode*));
+
+private:
+	treeNode* root;
+	int treeSize;
+	static void(*visit)(treeNode*);	//static function pointer
+	static void preOrder(treeNode* t);	//Recurrence functions must be defined static.
+	static void inOrder(treeNode* t);
+	static void postOrder(treeNode* t);
+	static void dispose(treeNode* t) { delete t; }
+	static int height(treeNode* t);
+	static treeNode* copyToNew(treeNode* t);
+	static void deleteAll(treeNode* t);
+	static bool compare(treeNode* t1, treeNode* t2);
+	static void out(std::ostream& os, treeNode* t);
+};
+
+template<typename T>
+void chainBinaryTree<T>::preOrder(treeNode* t)
+{
+	visit(t);
+	preOrder(t->leftChild);
+	preOrder(t->rightChild);
+}
+
+template<typename T>
+void chainBinaryTree<T>::inOrder(treeNode* t)
+{
+	inOrder(t->leftChild);
+	visit(t);
+	inOrder(t->rightChild);
+}
+
+template<typename T>
+void chainBinaryTree<T>::postOrder(treeNode* t)
+{
+	postOrder(t->leftChild);
+	postOrder(t->rightChild);
+	visit(t);
+}
+
+template<typename T>
+int chainBinaryTree<T>::height(treeNode* t)
+{
+	if (t == NULL)
+		return 0;
+	int leftHeight = height(t->leftChild);
+	int rightHeight = height(t->rightChild);
+	if (leftHeight > rightHeight)
+		return ++leftHeight;
+	else
+		return ++rightHeight;
+}
+
+template<typename T>
+typename chainBinaryTree<T>::treeNode* chainBinaryTree<T>::copyToNew(treeNode* t)
+{
+	if (t == NULL)
+		return NULL;
+	treeNode* newNode = new treeNode(t->data);
+	newNode->leftChild = copyToNew(t->leftChild);
+	newNode->rightChild = copyToNew(t->rightChild);
+	return newNode;
+}
+
+template<typename T>
+void chainBinaryTree<T>::deleteAll(treeNode* t)
+{
+	if (t == NULL)
+		return;
+	treeNode* leftTemp = t->leftChild;
+	treeNode* rightTemp = t->rightChild;
+	delete t;
+	deleteAll(leftTemp);
+	deleteAll(rightTemp);
+}
+
+template<typename T>
+bool chainBinaryTree<T>::compare(treeNode* t1, treeNode* t2)
+{
+	if (t1 == NULL && t2 == NULL)
+		return true;
+	if ((t1 == NULL) xor (t2 == NULL))
+		return false;
+	bool leftResult = compare(t1->leftChild, t2->leftChild);
+	bool rightResult = compare(t1->rightChild, t2->rightChild);
+	bool thisResult = (t1->data == t2->data);
+	return leftResult && rightResult&&thisResult;
+}
+
+template<typename T>
+void chainBinaryTree<T>::out(std::ostream& os, treeNode* t)
+{
+	if (t == NULL)
+		return;
+	out(os, t->leftChild);
+	os << t->data << "\t";
+	out(os, t->rightChild);
+}
+
+template<typename T>
+chainBinaryTree<T>::chainBinaryTree(const chainBinaryTree<T>& theTree)
+	:treeSize(theTree.treeSize)
+{
+	root = copyToNew(theTree.root);
+}
+
+template<typename T>
+chainBinaryTree<T>::~chainBinaryTree()
+{
+	deleteAll(root);
+}
+
+template<typename T>
+chainBinaryTree<T>& chainBinaryTree<T>::operator=(const chainBinaryTree<T>& theTree)
+{
+	this->treeSize = theTree.treeSize;
+	deleteAll(this->root);
+	root = copyToNew(theTree.root);
+	return *this;
+}
+
+template<typename T>
+bool chainBinaryTree<T>::operator==(const chainBinaryTree<T>& theTree)const
+{
+	return compare(this->root, theTree.root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::clear()
+{
+	treeSize = 0;
+	deleteAll(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::preOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	preOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::inOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	inOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::postOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	postOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::levelOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* temp = q.front();
+		q.pop();
+		visit(temp);
+		if (temp->leftChild != NULL)
+			q.push(temp->leftChild);
+		if (temp->rightChild != NULL)
+			q.push(temp->rightChild);
+	}
+}
+
+template<typename T>
+bool chainBinaryTree<T>::push(int tag, const T& theElement)
+{
+	int h = height(root);
+	if (!(tag >= 1 && tag < (1 << h)))
+		return false;
+	int arrl = (int)log2(tag) + 1;
+	int* temp = new int[arrl];
+	temp[arrl - 1] = tag;
+	for (int i = arrl - 2; i >= 0; i--)
+		temp[i] = temp[i + 1] / 2;
+	int i = 0;
+	treeNode* tmp = root;
+	while (tmp != NULL && i < arrl - 2)
+	{
+		if (temp[i] * 2 == temp[i + 1])
+			tmp = tmp->leftChild;
+		else
+			tmp = tmp->rightChild;
+	}
+	if (tmp == NULL)
+	{
+		delete[] temp;
+		return false;
+	}
+	if (temp[arrl - 2] * 2 == temp[arrl - 1])
+	{
+		if (tmp->leftChild == NULL)
+		{
+			tmp->leftChild = new treeNode(theElement);
+			treeSize++;
+		}
+		else
+		{
+			tmp->leftChild->data = theElement;
+		}
+	}
+	else
+	{
+		if (tmp->rightChild == NULL)
+		{
+			tmp->rightChild = new treeNode(theElement);
+			treeSize++;
+		}
+		else
+		{
+			tmp->rightChild->data = theElement;
+		}
+	}
+	delete[] temp;
+	return true;
+}
+
+template<typename T>
+bool chainBinaryTree<T>::pop(int tag)
+{
+	int h = height(root);
+	if (!(tag >= 1 && tag < (1 << h)))
+		return false;
+	int arrl = (int)log2(tag) + 1;
+	int* temp = new int[arrl];
+	temp[arrl - 1] = tag;
+	for (int i = arrl - 2; i >= 0; i--)
+		temp[i] = temp[i + 1] / 2;
+	int i = 0;
+	treeNode* tmp = root;
+	while (tmp != NULL && i < arrl - 2)
+	{
+		if (temp[i] * 2 == temp[i + 1])
+			tmp = tmp->leftChild;
+		else
+			tmp = tmp->rightChild;
+	}
+	if (tmp == NULL)
+	{
+		delete[] temp;
+		return false;
+	}
+	if (temp[arrl - 2] * 2 == temp[arrl - 1])
+	{
+		if (tmp->leftChild == NULL)
+		{
+			delete[] temp;
+			return false;
+		}
+		else
+		{
+			delete tmp->leftChild;
+			tmp->leftChild = NULL;
+			treeSize--;
+		}
+	}
+	else
+	{
+		if (tmp->rightChild == NULL)
+		{
+			delete[] temp;
+			return false;
+		}
+		else
+		{
+			delete tmp->rightChild;
+			tmp->rightChild = NULL;
+			treeSize--;
+		}
+	}
+	delete[] temp;
+	return true;
+}
+
+#endif
