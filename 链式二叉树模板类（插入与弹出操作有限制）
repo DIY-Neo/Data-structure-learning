@@ -1,0 +1,839 @@
+#ifndef __CHAINBINARYTREE_H
+#define __CHAINBINARYTREE_H
+#include <iostream>
+#include <stdexcept>
+#include "arrayQueue.h"
+#include "arrayStack.h"
+
+class invalidOperation :public std::exception
+{
+public:
+	invalidOperation(const char* s = "")
+		:exception(s) {}
+	invalidOperation(const std::string& s = "")
+		:exception(s.c_str()) {}
+};
+
+template<typename T>
+class chainBinaryTree
+{
+public:
+	//basic unit
+	struct treeNode
+	{
+		T data;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode() :leftChild(NULL), rightChild(NULL) {}
+		treeNode(const T& dat, treeNode* l = NULL, treeNode* r = NULL) 
+			:data(dat), leftChild(l), rightChild(r) {}
+	};
+
+	//constructor and destructor
+	chainBinaryTree() :root(NULL), treeSize(0) {}
+	chainBinaryTree(const chainBinaryTree<T>& theTree);
+	~chainBinaryTree();
+
+	//iterators
+	class preOrderIterator
+	{
+	public:
+		typedef std::forward_iterator_tag iterator_category;
+		typedef std::ptrdiff_t difference_type;
+		typedef T value_type;
+		typedef T* pointer;
+		typedef T& reference;
+
+		preOrderIterator() :iterStack() {}
+		preOrderIterator(treeNode* tn);
+		preOrderIterator(const chainBinaryTree<T>::preOrderIterator& _iter) { iterStack = _iter.iterStack; }
+		~preOrderIterator() {}
+
+		T& operator*();
+		T* operator->();
+		preOrderIterator& operator=(typename chainBinaryTree<T>::preOrderIterator& _iter) { iterStack = _iterStack; return *this; }
+		bool operator==(const chainBinaryTree<T>::preOrderIterator& _iter)const { return iterStack == _iter.iterStack; }
+		bool operator!=(const chainBinaryTree<T>::preOrderIterator& _iter)const { return iterStack != _iter.iterStack; }
+
+		preOrderIterator& operator++();
+		const preOrderIterator operator++(int);
+
+	private:
+		arrayStack<treeNode*> iterStack;
+	};
+
+	class inOrderIterator
+	{
+	public:
+		typedef std::forward_iterator_tag iterator_category;
+		typedef std::ptrdiff_t difference_type;
+		typedef T value_type;
+		typedef T* pointer;
+		typedef T& reference;
+
+		inOrderIterator(treeNode* tn = NULL);
+		inOrderIterator(const chainBinaryTree<T>::inOrderIterator& _iter) :iterStack(_iter.iterStack) {}
+		~inOrderIterator() {};
+
+		T& operator*();
+		T* operator->();
+		inOrderIterator& operator=(const chainBinaryTree<T>::inOrderIterator& _iter);
+		bool operator==(const chainBinaryTree<T>::inOrderIterator& _iter)const { return iterStack == _iter.iterStack; }
+		bool operator!=(const chainBinaryTree<T>::inOrderIterator& _iter)const { return iterStack != _iter.iterStack; }
+
+		inOrderIterator& operator++();
+		const inOrderIterator operator++(int);
+
+	private:
+		arrayStack<treeNode*> iterStack;
+	};
+
+	class postOrderIterator
+	{
+	public:
+		typedef std::forward_iterator_tag iterator_category;
+		typedef std::ptrdiff_t difference_type;
+		typedef T value_type;
+		typedef T* pointer;
+		typedef T& reference;
+
+		postOrderIterator(treeNode* tn = NULL);
+		postOrderIterator(const postOrderIterator& _iter) :iterStack(_iter.iterStack), rightRecorder(_iter.rightRecorder) {}
+		~postOrderIterator() {}
+
+		T& operator*();
+		T* operator->();
+		postOrderIterator& operator=(const chainBinaryTree<T>::postOrderIterator& _iter);
+		bool operator==(const chainBinaryTree<T>::postOrderIterator& _iter)const;
+		bool operator!=(const chainBinaryTree<T>::postOrderIterator& _iter)const;
+
+		postOrderIterator& operator++();
+		const postOrderIterator operator++(int);
+	private:
+		arrayStack<treeNode*> iterStack;
+		arrayStack<treeNode*> rightRecorder;
+	};
+
+	int height()const { return height(root); }
+	int size()const { return treeSize; }
+	bool empty()const { return treeSize == 0; }
+	chainBinaryTree<T>& operator=(const chainBinaryTree<T>& theTree);
+	bool operator==(const chainBinaryTree<T>& theTree)const;
+	void output(std::ostream& os)const { out(os, root); }
+	void swapTrees();
+	int maxHeightDiff();
+	void clear();
+
+	bool push(int tag, const T& theElement);
+	bool pop(int tag);
+
+	void recursivePreOrder(void(*pf)(treeNode*));
+	void recursiveInOrder(void(*pf)(treeNode*));
+	void recursivePostOrder(void(*pf)(treeNode*));
+	void levelOrder(void(*pf)(treeNode*));
+
+	void preOrder(void(*pf)(treeNode*));
+	void inOrder(void(*pf)(treeNode*));
+	void postOrder(void(*pf)(treeNode*));
+
+	void rebuildFromList_pre_in(T* preList, T* inList, int size);
+	void rebuildFromList_in_post(T* inList, T* postList, int size);
+	//void rebuildFromList_post_pre(T* postList, T* preList, int size);
+
+	preOrderIterator preOrderBegin()const;
+	preOrderIterator preOrderEnd()const;
+	inOrderIterator inOrderBegin()const;
+	inOrderIterator inOrderEnd()const;
+	postOrderIterator postOrderBegin()const;
+	postOrderIterator postOrderEnd()const;
+protected:
+	treeNode* root;
+	int treeSize;
+	static void (*visit)(typename chainBinaryTree<T>::treeNode*);	//static function pointer
+	static void preOrder(treeNode* t);	//Recurrence functions must be defined static.
+	static void inOrder(treeNode* t);
+	static void postOrder(treeNode* t);
+	static void dispose(treeNode* t) { delete t; }
+	static int height(treeNode* t);
+	static treeNode* copyToNew(treeNode* t);
+	static void deleteAll(treeNode* t);
+	static bool compare(treeNode* t1, treeNode* t2);
+	static void swap(treeNode* t);
+	static void out(std::ostream& os, treeNode* t);
+	static void rebuildFromList_pre_in(treeNode*& rt, T* pre, T* in, int size);
+	static void rebuildFromList_in_post(treeNode*& rt, T* in, T* post, int size);
+	//static void rebuildFromList_post_pre(treeNode*& rt, T* post, T* pre, int size);
+};
+
+template<typename T>
+void(*chainBinaryTree<T>::visit)(typename chainBinaryTree<T>::treeNode*);	//static data member must be instantiated
+
+template<typename T>
+void chainBinaryTree<T>::preOrder(treeNode* t)
+{
+	if (t == NULL) return;
+	visit(t);
+	preOrder(t->leftChild);
+	preOrder(t->rightChild);
+}
+
+template<typename T>
+void chainBinaryTree<T>::inOrder(treeNode* t)
+{
+	if (t == NULL) return;
+	inOrder(t->leftChild);
+	visit(t);
+	inOrder(t->rightChild);
+}
+
+template<typename T>
+void chainBinaryTree<T>::postOrder(treeNode* t)
+{
+	if (t == NULL) return;
+	postOrder(t->leftChild);
+	postOrder(t->rightChild);
+	visit(t);
+}
+
+template<typename T>
+int chainBinaryTree<T>::height(treeNode* t)
+{
+	if (t == NULL)
+		return 0;
+	int leftHeight = height(t->leftChild);
+	int rightHeight = height(t->rightChild);
+	if (leftHeight > rightHeight)
+		return ++leftHeight;
+	else
+		return ++rightHeight;
+}
+
+template<typename T>
+typename chainBinaryTree<T>::treeNode* chainBinaryTree<T>::copyToNew(treeNode* t)
+{
+	if (t == NULL)
+		return NULL;
+	treeNode* newNode = new treeNode(t->data);
+	newNode->leftChild = copyToNew(t->leftChild);
+	newNode->rightChild = copyToNew(t->rightChild);
+	return newNode;
+}
+
+template<typename T>
+void chainBinaryTree<T>::deleteAll(treeNode* t)
+{
+	if (t == NULL)
+		return;
+	treeNode* leftTemp = t->leftChild;
+	treeNode* rightTemp = t->rightChild;
+	delete t;
+	deleteAll(leftTemp);
+	deleteAll(rightTemp);
+}
+
+template<typename T>
+bool chainBinaryTree<T>::compare(treeNode* t1, treeNode* t2)
+{
+	if (t1 == NULL && t2 == NULL)
+		return true;
+	if ((t1 == NULL) xor (t2 == NULL))
+		return false;
+	bool leftResult = compare(t1->leftChild, t2->leftChild);
+	bool rightResult = compare(t1->rightChild, t2->rightChild);
+	bool thisResult = (t1->data == t2->data);
+	return leftResult && rightResult&&thisResult;
+}
+
+template<typename T>
+void chainBinaryTree<T>::out(std::ostream& os, treeNode* t)
+{
+	if (t == NULL)
+		return;
+	out(os, t->leftChild);
+	os << t->data << "\t";
+	out(os, t->rightChild);
+}
+
+template<typename T>
+chainBinaryTree<T>::chainBinaryTree(const chainBinaryTree<T>& theTree)
+	:treeSize(theTree.treeSize)
+{
+	root = copyToNew(theTree.root);
+}
+
+template<typename T>
+chainBinaryTree<T>::~chainBinaryTree()
+{
+	deleteAll(root);
+}
+
+template<typename T>
+chainBinaryTree<T>& chainBinaryTree<T>::operator=(const chainBinaryTree<T>& theTree)
+{
+	this->treeSize = theTree.treeSize;
+	deleteAll(this->root);
+	root = copyToNew(theTree.root);
+	return *this;
+}
+
+template<typename T>
+bool chainBinaryTree<T>::operator==(const chainBinaryTree<T>& theTree)const
+{
+	return compare(this->root, theTree.root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::clear()
+{
+	treeSize = 0;
+	deleteAll(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::recursivePreOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	preOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::recursiveInOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	inOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::recursivePostOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	postOrder(root);
+}
+
+template<typename T>
+void chainBinaryTree<T>::levelOrder(void(*pf)(treeNode*))
+{
+	visit = pf;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* temp = q.front();
+		q.pop();
+		visit(temp);
+		if (temp->leftChild != NULL)
+			q.push(temp->leftChild);
+		if (temp->rightChild != NULL)
+			q.push(temp->rightChild);
+	}
+}
+
+template<typename T>
+void chainBinaryTree<T>::preOrder(void(*pf)(typename chainBinaryTree<T>::treeNode*))
+{
+	if (root == NULL) return;
+	visit = pf;
+	arrayStack<treeNode*> s;
+	treeNode* temp;
+	s.push(root);
+	while (!s.empty())
+	{
+		temp = s.top();
+		visit(temp);
+		s.pop();
+		if (temp->rightChild != NULL)
+			s.push(temp->rightChild);
+		if (temp->leftChild != NULL)
+			s.push(temp->leftChild);
+	}
+}
+
+template<typename T>
+void chainBinaryTree<T>::inOrder(void(*pf)(typename chainBinaryTree<T>::treeNode*))
+{
+	if (root == NULL) return;
+	visit = pf;
+	arrayStack<treeNode*> s;
+	treeNode* temp = root;
+	while (!s.empty() || temp != NULL)
+	{
+		while (temp != NULL)
+		{
+			s.push(temp);
+			temp = temp->leftChild;
+		}
+		while(!s.empty() && s.top()->rightChild == NULL)
+		{ 
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty()) 
+			temp = s.top();
+		else 
+			break;
+		if (temp->rightChild != NULL)
+		{
+			temp = temp->rightChild;
+			visit(s.top());
+			s.pop();
+		}
+	}
+}
+
+template<typename T>
+void chainBinaryTree<T>::postOrder(void(*pf)(typename chainBinaryTree<T>::treeNode*))
+{
+	if (root == NULL) return;
+	visit = pf;
+	arrayStack<treeNode*> s, S;
+	treeNode* currentNode;
+	s.push(root);
+	while (!s.empty())
+	{
+		currentNode = s.top();
+		s.pop();
+		S.push(currentNode);
+		if (currentNode->leftChild != NULL)
+			s.push(currentNode->leftChild);
+		if (currentNode->rightChild != NULL)
+			s.push(currentNode->rightChild);
+	}
+	while (!S.empty())
+	{
+		visit(S.top());
+		S.pop();
+	}
+}
+
+template<typename T>
+void chainBinaryTree<T>::rebuildFromList_pre_in(treeNode*& rt, T* pre, T* in, int size)
+{
+	if (size == 0) return;
+	int inRootIndex = -1;
+	for (int i = 0; i < size; i++)
+		if (pre[0] == in[i])
+		{
+			inRootIndex = i;
+			break;
+		}
+	if (inRootIndex == -1) throw std::exception("Sequences mismatch.");
+	int leftLength = inRootIndex;
+	int rightLength = size - leftLength - 1;
+	rt = new treeNode(pre[0]);
+	rebuildFromList_pre_in(rt->leftChild, pre + 1, in, leftLength);
+	rebuildFromList_pre_in(rt->rightChild, pre + leftLength + 1, in + leftLength + 1, rightLength);
+}
+
+template<typename T>
+void chainBinaryTree<T>::rebuildFromList_pre_in(T* pre, T* in, int size)
+{
+	rebuildFromList_pre_in(root, pre, in, size);
+	treeSize = size;
+}
+
+template<typename T>
+void chainBinaryTree<T>::rebuildFromList_in_post(treeNode*& rt, T* in, T* post, int size)
+{
+	if (size == 0) return;
+	int inRootIndex = -1;
+	for (int i = 0; i < size; i++)
+		if (post[size - 1] == in[i])
+		{
+			inRootIndex = i;
+			return;
+		}
+	if (inRootIndex == -1) throw std::exception("Sequences mismatch.");
+	int leftLength = inRootIndex;
+	int rightLength = size - leftLength - 1;
+	rebuildFromList_in_post(rt->leftChild, in, post, leftLength);
+	rebuildFromList_in_post(rt->rightChild, in + leftLength + 1, post + leftLength, rightLength);
+}
+
+template<typename T>
+void chainBinaryTree<T>::rebuildFromList_in_post(T* in, T* post, int size)
+{
+	rebuildFromList_in_post(root, in, post, size);
+	treeSize = size;
+}
+
+template<typename T>
+bool chainBinaryTree<T>::push(int tag, const T& theElement)
+{
+	if (root == NULL)
+	{
+		if (tag == 1)
+		{
+			root = new treeNode(theElement);
+			treeSize++;
+			return true;
+		}
+		else
+			return false;
+	}
+
+	int arrl = (int)log2(tag) + 1;
+	int* tagChain = new int[arrl];
+	tagChain[arrl - 1] = tag;
+	for (int i = arrl - 2; i >= 0; i--)
+		tagChain[i] = tagChain[i + 1] / 2;
+
+	int i = 1;
+	treeNode* temp = root;
+	while (i < arrl - 1)
+	{
+		if (tagChain[i] == tagChain[i - 1] * 2)
+			temp = temp->leftChild;
+		else
+			temp = temp->rightChild;
+		i++;
+		if (temp == NULL)
+		{
+			delete[] tagChain;
+			return false;
+		}
+	}
+	
+	if (tagChain[arrl - 1] == tagChain[arrl - 2] * 2)
+	{
+		if (temp->leftChild == NULL)
+		{
+			treeNode* newNode = new treeNode(theElement);
+			temp->leftChild = newNode;
+			treeSize++;
+			delete[] tagChain;
+			return true;
+		}
+		else
+		{
+			temp->leftChild->data = theElement;
+			delete[] tagChain;
+			return true;
+		}
+	}
+	else
+	{
+		if (temp->rightChild == NULL)
+		{
+			treeNode* newNode = new treeNode(theElement);
+			temp->rightChild = newNode;
+			treeSize++;
+			delete[] tagChain;
+			return true;
+		}
+		else
+		{
+			temp->leftChild->data = theElement;
+			delete[] tagChain;
+			return true;
+		}
+	}
+}
+
+template<typename T>
+bool chainBinaryTree<T>::pop(int tag)
+{
+	if (root == NULL) return false;
+	int arrl = (int)log2(tag) + 1;
+	int* tagChain = new int[arrl];
+	tagChain[arrl - 1] = tag;
+	for (int i = arrl - 2; i >= 0; i--)
+		tagChain[i] = tagChain[i + 1] / 2;
+
+	int i = 1;
+	treeNode* temp = root;
+	while (i < arrl - 1)
+	{
+		if (tagChain[i] == tagChain[i - 1] * 2)
+			temp = temp->leftChild;
+		else
+			temp = temp->rightChild;
+		i++;
+		if (temp == NULL)
+		{
+			delete[] tagChain;
+			return false;
+		}
+	}
+	treeNode* preNode = temp;
+	if (tagChain[arrl - 1] == 2 * tagChain[arrl - 2])
+		temp = temp->leftChild;
+	else
+		temp = temp->rightChild;
+	if (temp == NULL)
+	{
+		delete[] tagChain;
+		return false;
+	}
+	if (temp->leftChild != NULL || temp->rightChild != NULL)
+	{
+		delete[] tagChain;
+		return false;
+	}	//not a leaf
+	if (tagChain[arrl - 1] == 2 * tagChain[arrl - 2])
+	{
+		preNode->leftChild = NULL;
+		delete temp;
+		treeSize--;
+		return true;
+	}
+	else
+	{
+		preNode->rightChild = NULL;
+		delete temp;
+		treeSize--;
+		return true;
+	}
+}
+
+template<typename T>
+void chainBinaryTree<T>::swap(treeNode* t)
+{
+	treeNode* temp = t->leftChild;
+	t->leftChild = t->rightChild;
+	t->rightChild = temp;
+}
+
+template<typename T>
+void chainBinaryTree<T>::swapTrees()
+{
+	inOrder(chainBinaryTree<T>::swap);
+}
+
+template<typename T>
+int chainBinaryTree<T>::maxHeightDiff()
+{
+	if (root == NULL) return 0;
+	int leftHeight = height(root->leftChild);
+	int rightHeight = height(root->rightChild);
+	return (leftHeight > rightHeight) ? (leftHeight - rightHeight) : (rightHeight - leftHeight);
+}
+
+template<typename T>
+chainBinaryTree<T>::preOrderIterator::preOrderIterator(treeNode* tn)
+{
+	iterStack.push(tn);
+}
+
+template<typename T>
+typename chainBinaryTree<T>::preOrderIterator chainBinaryTree<T>::preOrderBegin()const
+{
+	if (!(*this).empty())
+		return preOrderIterator(root);
+	else
+		return preOrderIterator();
+}
+
+template<typename T>
+typename chainBinaryTree<T>::preOrderIterator chainBinaryTree<T>::preOrderEnd()const
+{
+	return preOrderIterator();
+}
+
+template<typename T>
+T& chainBinaryTree<T>::preOrderIterator::operator*()
+{
+	try { return iterStack.top()->data; }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+T* chainBinaryTree<T>::preOrderIterator::operator->()
+{
+	try { return &(iterStack.top()->data); }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+typename chainBinaryTree<T>::preOrderIterator& chainBinaryTree<T>::preOrderIterator::operator++()
+{
+	if (iterStack.empty())
+	{
+		std::string s = "++operation failed: iterator points at the end.";
+		throw invalidOperation(s);
+	}
+	treeNode* currentNode = iterStack.top();
+	iterStack.pop();
+	if (currentNode->rightChild != NULL)
+		iterStack.push(currentNode->rightChild);
+	if (currentNode->leftChild != NULL)
+		iterStack.push(currentNode->leftChild);
+	return *this;
+}
+
+template<typename T>
+typename const chainBinaryTree<T>::preOrderIterator chainBinaryTree<T>::preOrderIterator::operator++(int)
+{
+	preOrderIterator old = *this;
+	++(*this);
+	return old;
+}
+
+template<typename T>
+chainBinaryTree<T>::inOrderIterator::inOrderIterator(treeNode* rt)
+{
+	if (rt == NULL) return;
+	iterStack.push(rt);
+	treeNode* temp = rt;
+	while (temp->leftChild != NULL)
+	{
+		temp = temp->leftChild;
+		iterStack.push(temp);
+	}
+}
+
+template<typename T>
+T& chainBinaryTree<T>::inOrderIterator::operator*()
+{
+	try { return iterStack.top()->data; }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+T* chainBinaryTree<T>::inOrderIterator::operator->()
+{
+	try { return &(iterStack.top()->data); }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+typename chainBinaryTree<T>::inOrderIterator& chainBinaryTree<T>::inOrderIterator::operator=(const chainBinaryTree<T>::inOrderIterator& _iter)
+{
+	iterStack = _iter.iterStack;
+	return *this;
+}
+
+template<typename T>
+typename chainBinaryTree<T>::inOrderIterator& chainBinaryTree<T>::inOrderIterator::operator++()
+{
+	if (iterStack.empty())
+	{
+		std::string s = "++operation failed: iterator points at the end.";
+		throw invalidOperation(s);
+	}
+	treeNode* temp = iterStack.top();
+	iterStack.pop();
+	if (temp->rightChild != NULL)
+	{ 
+		temp = temp->rightChild;
+		iterStack.push(temp);
+		while (temp->leftChild != NULL)
+		{
+			temp = temp->leftChild;
+			iterStack.push(temp);
+		}
+	}
+	return *this;
+}
+
+template<typename T>
+typename const chainBinaryTree<T>::inOrderIterator chainBinaryTree<T>::inOrderIterator::operator++(int)
+{
+	inOrderIterator old = *this;
+	++(*this);
+	return old;
+}
+
+template<typename T>
+typename chainBinaryTree<T>::inOrderIterator chainBinaryTree<T>::inOrderBegin()const
+{
+	return inOrderIterator(root);
+}
+
+template<typename T>
+typename chainBinaryTree<T>::inOrderIterator chainBinaryTree<T>::inOrderEnd()const
+{
+	return inOrderIterator();
+}
+
+template<typename T>
+chainBinaryTree<T>::postOrderIterator::postOrderIterator(treeNode* tn)
+	:iterStack(), rightRecorder()
+{
+	rightRecorder.push(NULL);
+	if (tn == NULL)
+		return;
+	treeNode* temp = tn;
+	iterStack.push(temp);
+	while (temp->leftChild != NULL)
+	{
+		temp = temp->leftChild;
+		iterStack.push(temp);
+	}
+}
+
+template<typename T>
+T& chainBinaryTree<T>::postOrderIterator::operator*()
+{
+	try { return iterStack.top()->data; }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+T* chainBinaryTree<T>::postOrderIterator::operator->()
+{
+	try { return &(iterStack.top()->data); }
+	catch (std::exception& e) { std::cout << e.what() << std::endl; }
+}
+
+template<typename T>
+typename chainBinaryTree<T>::postOrderIterator& chainBinaryTree<T>::postOrderIterator::operator=(const postOrderIterator& _iter)
+{
+	iterStack = _iter.iterStack;
+	rightRecorder = rightRecorder;
+	return *this;
+}
+
+template<typename T>
+bool chainBinaryTree<T>::postOrderIterator::operator==(const postOrderIterator& _iter)const
+{
+	return (iterStack == _iter.iterStack) && (rightRecorder == _iter.rightRecorder);
+}
+
+template<typename T>
+bool chainBinaryTree<T>::postOrderIterator::operator!=(const postOrderIterator& _iter)const
+{
+	return (iterStack != _iter.iterStack) || (rightRecorder != _iter.rightRecorder);
+}
+
+template<typename T>
+typename chainBinaryTree<T>::postOrderIterator& chainBinaryTree<T>::postOrderIterator::operator++()
+{
+	treeNode* tmp = iterStack.top();
+	iterStack.pop();
+	if (tmp == rightRecorder.top())
+		rightRecorder.pop();
+	while (!iterStack.empty() && iterStack.top()->rightChild != NULL && iterStack.top() != rightRecorder.top())
+	{
+		treeNode* temp = iterStack.top();
+		rightRecorder.push(temp);
+		temp = temp->rightChild;
+		while (temp != NULL)
+		{
+			iterStack.push(temp);
+			temp = temp->leftChild;
+		}
+	}
+	return *this;
+}
+
+template<typename T>
+typename const chainBinaryTree<T>::postOrderIterator chainBinaryTree<T>::postOrderIterator::operator++(int)
+{
+	postOrderIterator old = *this;
+	++(*this);
+	return old;
+}
+
+template<typename T>
+typename chainBinaryTree<T>::postOrderIterator chainBinaryTree<T>::postOrderBegin()const
+{
+	return postOrderIterator(root);
+}
+
+template<typename T>
+typename chainBinaryTree<T>::postOrderIterator chainBinaryTree<T>::postOrderEnd()const
+{
+	return postOrderIterator();
+}
+
+#endif
