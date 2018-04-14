@@ -1,0 +1,106 @@
+#include <iostream>
+#include <algorithm>
+#include <random>
+#include <ctime>
+
+
+void RecursiveMergeSort(int* arr, int num);
+void display(int targ);
+bool isSorted(int* arr, int num);
+
+std::mt19937 random(time(NULL));
+
+int main()
+{
+	const int testLength = 100;
+	int testArr[testLength];
+	bool isAlgorithmChecked = true;
+	for (int times = 0; times < 100; times++)
+	{
+		for (int i = 0; i < testLength; i++)
+			testArr[i] = random() % 100;
+		RecursiveMergeSort(testArr, testLength);
+		isAlgorithmChecked &= isSorted(testArr, testLength);
+	}
+	std::cout << (isAlgorithmChecked ? "Algorithm is feasible." : "Algorithm is infeasible.") << std::endl;
+
+	std::cout << "Performance test for recursive merge sort:" << std::endl;
+	int instanceNum = 0;
+	int increaseStep = 100;
+	while (instanceNum < 10000)
+	{
+		if (instanceNum == 1000)
+			increaseStep = 1000;
+		instanceNum += increaseStep;
+		int* testArr = new int[instanceNum];
+		for (int i = 0; i < instanceNum; i++)
+			testArr[i] = random() % 100;
+		clock_t startTime=clock();
+		clock_t endTime = startTime;
+		int run = 0;
+		while (endTime - startTime < 1000)
+		{
+			int* test = new int[instanceNum];
+			std::copy(testArr, testArr + instanceNum, test);
+			RecursiveMergeSort(test, instanceNum);
+			run++;
+			endTime = clock();
+		}
+		std::cout << "Instance Number: " << instanceNum
+			<< "\tTime Consumption: " << double(endTime - startTime) / run << "\n";
+	}
+	
+
+	std::system("pause");
+	return 0;
+}
+
+void RecursiveMergeSort(int* arr, int num)
+{
+	if (num == 1)
+		return;
+	RecursiveMergeSort(arr, num / 2);
+	RecursiveMergeSort(arr + num / 2, num - num / 2);
+	int* tempArr = new int[num];
+	int i = 0;
+	int j = 0;
+	while (i < num / 2 && j < num - num / 2)
+	{
+		if (arr[i] >= (arr + num / 2)[j])
+		{
+			tempArr[i + j] = arr[i];
+			i++;
+		}
+		else
+		{
+			tempArr[i + j] = (arr + num / 2)[j];
+			j++;
+		}
+	} 
+	if (i < num / 2)
+	{ 
+		std::copy(arr + i, arr + num / 2, tempArr + i + j);
+		i = num / 2;
+	}
+	else
+	{ 
+		std::copy(arr + num / 2 + j, arr + num, tempArr + i + j);
+		j = num - num / 2;
+	}
+	
+	std::copy(tempArr, tempArr + num, arr);
+	delete[] tempArr;
+}
+
+void display(int targ)
+{
+	std::cout << targ << "\t";
+}
+
+bool isSorted(int* arr, int num)
+{
+	bool result = true;
+	for (int i = 0; i < num - 1; i++)
+		result &= (arr[i] >= arr[i + 1]);
+	return result;
+}
