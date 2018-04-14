@@ -27,10 +27,12 @@ int main()
 	std::cout << "Performance test for recursive merge sort:" << std::endl;
 	int instanceNum = 0;
 	int increaseStep = 100;
-	while (instanceNum < 10000)
+	while (instanceNum < 100000)
 	{
 		if (instanceNum == 1000)
 			increaseStep = 1000;
+		if (instanceNum == 10000)
+			increaseStep = 10000;
 		instanceNum += increaseStep;
 		int* testArr = new int[instanceNum];
 		for (int i = 0; i < instanceNum; i++)
@@ -44,6 +46,7 @@ int main()
 			std::copy(testArr, testArr + instanceNum, test);
 			RecursiveMergeSort(test, instanceNum);
 			run++;
+			delete[] test;
 			endTime = clock();
 		}
 		std::cout << "Instance Number: " << instanceNum
@@ -87,7 +90,6 @@ void RecursiveMergeSort(int* arr, int num)
 		std::copy(arr + num / 2 + j, arr + num, tempArr + i + j);
 		j = num - num / 2;
 	}
-	
 	std::copy(tempArr, tempArr + num, arr);
 	delete[] tempArr;
 }
