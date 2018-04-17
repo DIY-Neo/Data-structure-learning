@@ -1,0 +1,82 @@
+#pragma once
+#include <algorithm>
+
+template<typename T>
+class completeWinnerTree
+{
+protected:
+	static unsigned int log2i(const unsigned int num)
+	{
+		if (num == 0)
+			return 0xFFFFFFFF;
+		int i = 0;
+		while ((1 << i) <= num) i++;
+		return --i;
+	}
+public:
+	completeWinnerTree() :tree(NULL), playerArr(NULL), playerNum(0) {}
+	~completeWinnerTree();
+
+	void initialize(const T* thePlayers, int nPlayer);
+	void clear();
+	int winner()const;
+	void rePlay(int playerIndex, const T& thePlayer);
+
+private:
+	int* tree;
+	T* playerArr;
+	int playerNum;
+};
+
+template<typename T>
+completeWinnerTree<T>::~completeWinnerTree()
+{
+	delete[] tree;
+	delete[] playerArr;
+}
+
+template<typename T>
+void completeWinnerTree<T>::initialize(const T* thePlayers, int nPlayer)
+{
+	playerNum = nPlayer;
+	playerArr = new T[playerNum];
+	std::copy(thePlayers, thePlayers + nPlayer, playerArr);
+	tree = new int[2 * playerNum];
+	for (int i = 0; i < playerNum; i++)
+		tree[playerNum + i] = i;
+	for (int i = playerNum - 1; i > 0; i--)
+		tree[i] = (playerArr[tree[2 * i]] >= playerArr[tree[2 * i + 1]]) ? (tree[2 * i]) : (tree[2 * i + 1]);
+}
+
+template<typename T>
+void completeWinnerTree<T>::clear()
+{
+	delete[] playerArr;
+	delete[] tree;
+	playerArr = NULL;
+	tree = NULL;
+	playerNum = 0;
+}
+
+template<typename T>
+int completeWinnerTree<T>::winner()const
+{
+	if (playerNum > 0)
+		return tree[1];
+	else
+		return -1;
+}
+
+template<typename T>
+void completeWinnerTree<T>::rePlay(int playerIndex, const T& thePlayer)
+{
+	if (!(playerIndex >= 0 && playerIndex < playerNum))
+		return;
+	playerArr[playerIndex] = thePlayer;
+	int i = (playerIndex + playerNum) / 2;
+	while (i != 0)
+	{
+		tree[i] = (playerArr[tree[2 * i]] >= playerArr[tree[2 * i + 1]]) ? (tree[2 * i]) : (tree[2 * i + 1]);
+		i /= 2;
+	}
+}
