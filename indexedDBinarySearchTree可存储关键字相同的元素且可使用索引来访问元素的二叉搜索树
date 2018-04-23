@@ -1,0 +1,246 @@
+#pragma once
+#include <iostream>
+#include <sstream>
+#include <string>
+#include "arrayStack.h"
+#include "arrayQueue.h"
+#include "indexedBinarySearchTree.h"
+
+template<typename K, typename E>
+class indexedDBinarySearchTree
+{
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		int leftSize;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode() {}
+		treeNode(const std::pair<const K, E>& _dat, int lfsize = 0, treeNode* lchild = NULL, treeNode* rchild = NULL)
+			:data(_dat), leftSize(lfsize), leftChild(lchild), rightChild(rchild) {}
+	};
+
+	indexedDBinarySearchTree() :root(NULL), treeSize(0) {}
+	~indexedDBinarySearchTree();
+
+	int size()const { return treeSize; }
+	bool empty()const { return treeSize == 0; }
+	const std::pair<const K, E>* find(const K& _key)const;
+	void insert(const std::pair<const K, E>& _dat);
+	bool erase(const K& _key);
+	std::pair<const K, E>& operator[](int index);
+	void ascend(void(*pf)(treeNode*));
+
+private:
+	treeNode* root;
+	int treeSize;
+	static void(*visit)(treeNode*);
+
+};
+
+template<typename K, typename E>
+void(*indexedDBinarySearchTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+indexedDBinarySearchTree<K, E>::~indexedDBinarySearchTree()
+{
+	arrayQueue<treeNode*> q;
+	if (root != NULL)
+		q.push(root);
+	while (!q.empty())
+	{
+		if (q.front()->leftChild != NULL)
+			q.push(q.front()->leftChild);
+		if (q.front()->rightChild != NULL)
+			q.push(q.front()->rightChild);
+		delete q.front();
+		q.pop();
+	}
+	root = NULL;
+	visit = NULL;
+	treeSize = 0;
+}
+
+template<typename K, typename E>
+const std::pair<const K, E>* indexedDBinarySearchTree<K, E>::find(const K& _key)const
+{
+	treeNode* p = root;
+	while (p != NULL && _key != p->data.first)
+	{
+		if (_key < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return NULL;
+	else
+		return &(p->data);
+}
+
+template<typename K, typename E>
+void indexedDBinarySearchTree<K, E>::insert(const std::pair<const K, E>& _dat)
+{
+	if (treeSize == 0)
+	{
+		root = new treeNode(_dat);
+		treeSize++;
+		return;
+	}
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayQueue<treeNode*> q;
+	while (p != NULL)
+	{
+		pp = p;
+		if (_dat.first <= p->data.first)
+		{ 
+			p = p->leftChild;
+			q.push(pp);
+		}
+		else
+			p = p->rightChild;
+	}
+	while (!q.empty())
+	{
+		(q.front()->leftSize)++;
+		q.pop();
+	}
+	if (_dat.first <= pp->data.first)
+		pp->leftChild = new treeNode(_dat);
+	else
+		pp->rightChild = new treeNode(_dat);
+	treeSize++;
+	return;
+}
+
+template<typename K, typename E>
+bool indexedDBinarySearchTree<K, E>::erase(const K& _key)
+{
+	if (treeSize == 0)
+		return false;
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayQueue<treeNode*> q;
+	while (p != NULL && p->data.first != _key)
+	{
+		pp = p;
+		if (_key < p->data.first)
+		{
+			p = p->leftChild;
+			q.push(pp);
+		}
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return false;
+	while (!q.empty())
+	{
+		(q.front()->leftSize)--;
+		q.pop();
+	}
+	if (p->leftChild != NULL && p->rightChild != NULL)
+	{
+		treeNode* s = p->leftChild;
+		treeNode* ps = p;
+		while (s->rightChild != NULL)
+		{
+			ps = s;
+			s = s->rightChild;
+		}
+		treeNode* o = new treeNode(s->data, p->leftSize - 1, p->leftChild, p->rightChild);
+		if (pp == NULL)
+			root = o;
+		else
+		{ 
+			if (pp->leftChild == p)
+				pp->leftChild = o;
+			else
+				pp->rightChild = o;
+		}
+		if (ps == p)
+			pp = o;
+		else
+			pp = ps;
+		delete p;
+		p = s;
+	}
+	treeNode* c = NULL;
+	if (p->leftChild != NULL)
+		c = p->leftChild;
+	else
+		c = p->rightChild;
+	if (pp == NULL)
+		root = c;
+	else
+	{
+		if (pp->leftChild == p)
+			pp->leftChild = c;
+		else
+			pp->rightChild = c;
+	}
+	delete p;
+	treeSize--;
+	if (treeSize == 0)
+		root = NULL;
+	return true;
+}
+
+template<typename K, typename E>
+std::pair<const K, E>& indexedDBinarySearchTree<K, E>::operator[](int index)
+{
+	if (index < 0 || index >= treeSize)
+	{
+		std::ostringstream s;
+		s << "The index(" << index << ") is out of range.";
+		throw indexOutOfRange(s.str());
+	}
+	treeNode* p = root;
+	while (index != p->leftSize)
+	{
+		if (index < p->leftSize)
+			p = p->leftChild;
+		else
+		{
+			index -= (p->leftSize + 1);
+			p = p->rightChild;
+		}
+	}
+	return p->data;
+}
+
+template<typename K, typename E>
+void indexedDBinarySearchTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	if (treeSize == 0)
+		return;
+	visit = pf;
+	arrayStack<treeNode*> s;
+	s.push(root);
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty())
+		{
+			treeNode* tmp = s.top();
+			s.pop();
+			visit(tmp);
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+void displayKey(typename indexedDBinarySearchTree<K, E>::treeNode* theNode)
+{
+	if (theNode != NULL)
+		std::cout << theNode->data.first << "\t";
+}
