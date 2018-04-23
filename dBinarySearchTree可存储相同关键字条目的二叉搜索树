@@ -1,0 +1,192 @@
+#pragma once
+#include <iostream>
+#include "arrayStack.h"
+#include "arrayQueue.h"
+
+template<typename K, typename E>
+class dBinarySearchTree
+{
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode(const std::pair<const K, E>& _dat, treeNode* lc = NULL, treeNode* rc = NULL)
+			:data(_dat), leftChild(lc), rightChild(rc) {}
+	};
+
+	dBinarySearchTree() :root(NULL), treeSize(0) {}
+	~dBinarySearchTree();
+
+	int size()const { return treeSize; }
+	bool empty()const { return treeSize == 0; }
+	const std::pair<const K, E>* find(const K& _key)const;
+	void insert(const std::pair<const K, E>& _dat);
+	bool erase(const K& _key);
+
+	void ascend(void(*pf)(treeNode*));
+
+private:
+	treeNode* root;
+	int treeSize;
+	static void(*visit)(treeNode*);
+};
+
+template<typename K, typename E>
+void(*dBinarySearchTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+dBinarySearchTree<K, E>::~dBinarySearchTree()
+{
+	arrayQueue<treeNode*> q;
+	if (root != NULL)
+		q.push(root);
+	while (!q.empty())
+	{
+		if (q.front()->leftChild != NULL)
+			q.push(q.front()->leftChild);
+		if (q.front()->rightChild != NULL)
+			q.push(q.front()->rightChild);
+		delete q.front();
+		q.pop();
+	}
+}
+
+template<typename K, typename E>
+const std::pair<const K, E>* dBinarySearchTree<K, E>::find(const K& _key)const
+{
+	treeNode* p = root;
+	while (p != NULL && p->data.first != _key)
+	{
+		if (_key < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+		return &(p->data);
+	else
+		return NULL;
+}
+
+template<typename K, typename E>
+void dBinarySearchTree<K, E>::insert(const std::pair<const K, E>& _dat)
+{
+	if (root == NULL)
+	{
+		root = new treeNode(_dat);
+		treeSize++;
+		return;
+	}
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	while (p != NULL)
+	{
+		pp = p;
+		if (_dat.first <= p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (_dat.first <= pp->data.first)
+		pp->leftChild = new treeNode(_dat);
+	else
+		pp->rightChild = new treeNode(_dat);
+	treeSize++;
+	return;
+}
+
+template<typename K, typename E>
+bool dBinarySearchTree<K, E>::erase(const K& _key)
+{
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	while (p != NULL && p->data.first != _key)
+	{
+		pp = p;
+		if (_key < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return false;
+	if (p->leftChild != NULL && p->rightChild != NULL)
+	{
+		treeNode* s = p->leftChild;
+		treeNode* ps = p;
+		while (s->rightChild != NULL)
+		{
+			ps = s;
+			s = s->rightChild;
+		}
+		treeNode* q = new treeNode(s->data, p->leftChild, p->rightChild);
+		if (pp == NULL)
+			root = q;
+		else
+		{
+			if (pp->leftChild == p)
+				pp->leftChild = q;
+			else
+				pp->rightChild = q;
+		}
+		if (ps == p)
+			pp = q;
+		else
+			pp = ps;
+		delete p;
+		p = s;
+	}
+	
+	treeNode* c = NULL;
+	if (p->leftChild != NULL)
+		c = p->leftChild;
+	else
+		c = p->rightChild;
+	if (pp == NULL)
+		root = c;
+	else
+	{
+		if (pp->leftChild == p)
+			pp->leftChild = c;
+		else
+			pp->rightChild = c;
+	}
+	delete p;
+	treeSize--;
+	return true;
+}
+
+template<typename K, typename E>
+void dBinarySearchTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	arrayStack<treeNode*> s;
+	if (root == NULL)
+		return;
+	visit = pf;
+	s.push(root);
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if(!s.empty())
+		{ 
+			treeNode* tmp = s.top();
+			visit(tmp);
+			s.pop();
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+void displayKey(typename dBinarySearchTree<K, E>::treeNode* theNode)
+{
+	std::cout << theNode->data.first << "\t";
+}
