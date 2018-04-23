@@ -1,0 +1,257 @@
+#pragma once
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <sstream>
+#include "arrayStack.h"
+#include "arrayQueue.h"
+
+class indexOutOfRange :public std::exception
+{
+public:
+	indexOutOfRange(const char* s)
+		:exception(s) {}
+	indexOutOfRange(const std::string& s)
+		:exception(s.c_str()) {}
+};
+
+template<typename K, typename E>
+class indexedBinarySearchTree
+{
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		int leftSize;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode() {}
+		treeNode(const std::pair<const K, E>& _dat, int lfsize = 0, treeNode* lchild = NULL, treeNode* rchild = NULL)
+			:data(_dat), leftSize(lfsize), leftChild(lchild), rightChild(rchild) {}
+	};
+
+	indexedBinarySearchTree() :root(NULL), treeSize(0) {}
+	~indexedBinarySearchTree();
+
+	int size()const { return treeSize; }
+	bool empty()const { return treeSize == 0; }
+	const std::pair<const K, E>* find(const K& _key)const;
+	void insert(const std::pair<const K, E>& _dat);
+	bool erase(const K& _key);
+
+	std::pair<const K, E>& operator[](int index);
+	void ascend(void(*pf)(treeNode*));
+
+private:
+	treeNode* root;
+	int treeSize;
+	static void(*visit)(treeNode*);
+};
+
+template<typename K, typename E>
+void(*indexedBinarySearchTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+indexedBinarySearchTree<K, E>::~indexedBinarySearchTree()
+{
+	arrayQueue<treeNode*> q;
+	if (root != NULL)
+		q.push(root);
+	while (!q.empty())
+	{
+		if (q.front()->leftChild != NULL)
+			q.push(q.front()->leftChild);
+		if (q.front()->rightChild != NULL)
+			q.push(q.front()->rightChild);
+		delete q.front();
+		q.pop();
+	}
+	root = NULL;
+	visit = NULL;
+	treeSize = 0;
+}
+
+template<typename K, typename E>
+const std::pair<const K, E>* indexedBinarySearchTree<K, E>::find(const K& _key)const
+{
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	while (p != NULL && p->data.first != _key)
+	{
+		pp = p;
+		if (_key < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return NULL;
+	else
+		return &(p->data);
+}
+
+template<typename K, typename E>
+void indexedBinarySearchTree<K, E>::insert(const std::pair<const K, E>& _dat)
+{
+	if (treeSize==0)
+	{
+		root = new treeNode(_dat);
+		treeSize++;
+		return;
+	}
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayQueue<treeNode*> q;
+	while (p != NULL && p->data.first != _dat.first)
+	{
+		pp = p;
+		if (_dat.first < p->data.first)
+		{ 
+			p = p->leftChild;
+			q.push(pp);
+		}
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+		p->data.second = _dat.second;
+	else
+	{
+		if (_dat.first < pp->data.first)
+			pp->leftChild = new treeNode(_dat);
+		else
+			pp->rightChild = new treeNode(_dat);
+		while (!q.empty())
+		{
+			(q.front()->leftSize)++;
+			q.pop();
+		}
+		treeSize++;
+	}
+}
+
+template<typename K, typename E>
+std::pair<const K, E>& indexedBinarySearchTree<K, E>::operator[](int index)
+{
+	if (index >= treeSize || index < 0)
+	{
+		std::ostringstream s;
+		s << "The index(" << index << ") is out of range.";
+		throw indexOutOfRange(s.str());
+	}
+	treeNode* p = root;
+	while (index != p->leftSize)
+	{
+		if (index < p->leftSize)
+			p = p->leftChild;
+		else
+		{
+			index -= (p->leftSize + 1);
+			p = p->rightChild;
+		}
+	}
+	return p->data;
+}
+
+template<typename K, typename E>
+bool indexedBinarySearchTree<K, E>::erase(const K& _key)
+{
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayQueue<treeNode*> q;
+	while (p != NULL && p->data.first != _key)
+	{
+		pp = p;
+		if (_key < p->data.first)
+		{
+			p = p->leftChild;
+			q.push(pp);
+		}
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return false;
+	while (!q.empty())
+	{
+		(q.front()->leftSize)--;
+		q.pop();
+	}
+	if (p->leftChild != NULL && p->rightChild != NULL)
+	{
+		treeNode* s = p->leftChild;
+		treeNode* ps = p;
+		while (s->rightChild != NULL)
+		{
+			ps = s;
+			s = s->rightChild;
+		}
+		treeNode* o = new treeNode(s->data, p->leftSize - 1, p->leftChild, p->rightChild);
+		if (pp == NULL)
+			root = o;
+		else
+		{
+			if (pp->leftChild == p)
+				pp->leftChild = o;
+			else
+				pp->rightChild = o;
+		}
+		if (ps == p)
+			pp = o;
+		else
+			pp = ps;
+		delete p;
+		p = s;
+	}
+	treeNode* c = NULL;
+	if (p->leftChild != NULL)
+		c = p->leftChild;
+	else
+		c = p->rightChild;
+	if (pp == NULL)
+		root = c;
+	else
+	{
+		if (pp->leftChild == p)
+			pp->leftChild = c;
+		else
+			pp->rightChild = c;
+	}
+	delete p;
+	treeSize--;
+	return true;
+}
+
+template<typename K, typename E>
+void indexedBinarySearchTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	visit = pf;
+	if (treeSize == 0)
+		return;
+	arrayStack<treeNode*> s;
+	s.push(root);
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty())
+		{
+			treeNode* tmp = s.top();
+			visit(tmp);
+			s.pop();
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+void displayKey(typename indexedBinarySearchTree<K, E>::treeNode* theNode)
+{
+	if (theNode != NULL)
+		std::cout << theNode->data.first << "\t";
+}
