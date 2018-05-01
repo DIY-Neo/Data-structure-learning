@@ -1,0 +1,529 @@
+#pragma once
+#include <iostream>
+#include "arrayStack.h"
+#include "arrayQueue.h"
+
+template<typename K, typename E>
+class avlTree
+{
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		int balanceFactor;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode(const std::pair<const K, E>& _dat, int bf = 0, treeNode* lChild = NULL, treeNode* rChild = NULL)
+			:data(_dat), balanceFactor(bf), leftChild(lChild), rightChild(rChild) {}
+	};
+
+	avlTree() :root(NULL), treeSize(0) {}
+	~avlTree();
+
+	bool empty()const { return treeSize == 0; }
+	int size()const { return treeSize; }
+	int height()const { return Height(root); }
+	const std::pair<const K, E>* find(const K& theKey);
+	void insert(const std::pair<const K, E>& thePair);
+	bool erase(const K& theKey);
+	void ascend(void(*pf)(treeNode*));
+
+private:
+	treeNode* root;
+	int treeSize;
+	static void(*visit)(treeNode*);
+	static void LLshift(treeNode*& X);
+	static void LRshift(treeNode*& X);
+	static void RLshift(treeNode*& X);
+	static void RRshift(treeNode*& X);
+	static void R0shift(treeNode*& X);
+	static void R1shift(treeNode*& X);
+	static void R_1shift(treeNode*& X);
+	static void L0shift(treeNode*& X);
+	static void L1shift(treeNode*& X);
+	static void L_1shift(treeNode*& X);
+	static int Height(treeNode* X);
+};
+
+template<typename K, typename E>
+void(*avlTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+avlTree<K, E>::~avlTree()
+{
+	if (treeSize == 0)
+		return;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* tmp = q.front();
+		if (tmp->leftChild != NULL)
+			q.push(tmp->leftChild);
+		if (tmp->rightChild != NULL)
+			q.push(tmp->rightChild);
+		delete tmp;
+		q.pop();
+	}
+	treeSize = 0;
+}
+
+template<typename K, typename E>
+const std::pair<const K, E>* avlTree<K, E>::find(const K& theKey)
+{
+	treeNode* p = root;
+	while (p != NULL && theKey != p->data.first)
+	{
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return NULL;
+	else
+		return &(p->data);
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::LLshift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->leftChild;
+	A->leftChild = B->rightChild;
+	B->rightChild = A;
+	B->balanceFactor = 0;
+	A->balanceFactor = 0;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::LRshift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->leftChild;
+	treeNode* C = X->leftChild->rightChild;
+	B->rightChild = C->leftChild;
+	C->leftChild = B;
+	A->leftChild = C->rightChild;
+	C->rightChild = A;
+	if (C->balanceFactor == 1)
+	{
+		A->balanceFactor = -1;
+		B->balanceFactor = 0;
+	}
+	if (C->balanceFactor == -1)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 1;
+	}
+	if (C->balanceFactor == 0)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 0;
+	}
+	C->balanceFactor = 0;
+	X = C;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::RLshift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->rightChild;
+	treeNode* C = X->rightChild->leftChild;
+	B->leftChild = C->rightChild;
+	C->rightChild = B;
+	A->rightChild = C->leftChild;
+	C->leftChild = A;
+	if (C->balanceFactor == 1)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = -1;
+	}
+	if (C->balanceFactor == -1)
+	{
+		A->balanceFactor = 1;
+		B->balanceFactor = 0;
+	}
+	if (C->balanceFactor == 0)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 0;
+	}
+	C->balanceFactor = 0;
+	X = C;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::RRshift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->rightChild;
+	A->rightChild = B->leftChild;
+	B->leftChild = A;
+	B->balanceFactor = 0;
+	A->balanceFactor = 0;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::insert(const std::pair<const K, E>& thePair)
+{
+	if (treeSize == 0)
+	{
+		root = new treeNode(thePair);
+		treeSize++;
+		return;
+	}
+	arrayStack<treeNode*> s;
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	treeNode* X = root;	//the last node whose balanceFactor isn't 0.
+	while (p != NULL && p->data.first != thePair.first)
+	{
+		pp = p;
+		if (pp->balanceFactor != 0)
+			X = pp;
+		s.push(pp);
+		if (thePair.first < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL && thePair.first == p->data.first)
+	{
+		p->data.second = thePair.second;
+		return;
+	}
+	treeNode* tmp = NULL;
+	if (thePair.first < pp->data.first)
+		tmp = (pp->leftChild = new treeNode(thePair));
+	else
+		tmp = (pp->rightChild = new treeNode(thePair));
+	treeSize++;
+	while (!s.empty() && tmp != X)
+	{
+		if (tmp == s.top()->leftChild)
+			(s.top()->balanceFactor)++;
+		else
+			(s.top()->balanceFactor)--;
+		tmp = s.top();
+		s.pop();
+	}
+	if (X->balanceFactor > -2 && X->balanceFactor < 2)
+		return;
+	treeNode*& operatingObj = 
+		(X == root) ? (root) : ((s.top()->leftChild == tmp) ? 
+		(s.top()->leftChild) : (s.top()->rightChild));
+	if (X->balanceFactor == 2)
+	{
+		if (X->leftChild->balanceFactor == 1)	//LL
+			LLshift(operatingObj);
+		else									//LR
+			LRshift(operatingObj);
+	}
+	else
+	{
+		if (X->rightChild->balanceFactor == 1)	//RL
+			RLshift(operatingObj);
+		else									//RR
+			RRshift(operatingObj);
+	}
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::R0shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->leftChild;
+	A->leftChild = B->rightChild;
+	B->rightChild = A;
+	B->balanceFactor = -1;
+	A->balanceFactor = 1;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::R1shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->leftChild;
+	A->leftChild = B->rightChild;
+	B->rightChild = A;
+	B->balanceFactor = 0;
+	A->balanceFactor = 0;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::R_1shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->leftChild;
+	treeNode* C = X->leftChild->rightChild;
+	B->rightChild = C->leftChild;
+	C->leftChild = B;
+	A->leftChild = C->rightChild;
+	C->rightChild = A;
+	if (C->balanceFactor == 0)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 0;
+	}
+	if (C->balanceFactor == 1)
+	{
+		A->balanceFactor = -1;
+		B->balanceFactor = 0;
+	}
+	if (C->balanceFactor == -1)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 1;
+	}
+	C->balanceFactor = 0;
+	X = C;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::L0shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->rightChild;
+	A->rightChild = B->leftChild;
+	B->leftChild = A;
+	B->balanceFactor = 1;
+	A->balanceFactor = -1;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::L_1shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->rightChild;
+	A->rightChild = B->leftChild;
+	B->leftChild = A;
+	B->balanceFactor = 0;
+	A->balanceFactor = 0;
+	X = B;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::L1shift(treeNode*& X)
+{
+	treeNode* A = X;
+	treeNode* B = X->rightChild;
+	treeNode* C = X->rightChild->leftChild;
+	B->leftChild = C->rightChild;
+	C->rightChild = B;
+	A->rightChild = C->leftChild;
+	C->leftChild = A;
+	if (C->balanceFactor == 0)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = 0;
+	}
+	if (C->balanceFactor == 1)
+	{
+		A->balanceFactor = 0;
+		B->balanceFactor = -1;
+	}
+	if (C->balanceFactor == -1)
+	{
+		A->balanceFactor = 1;
+		B->balanceFactor = 0;
+	}
+	C->balanceFactor = 0;
+	X = C;
+}
+
+template<typename K, typename E>
+bool avlTree<K, E>::erase(const K& theKey)
+{
+	if (treeSize == 0)
+		return false;
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayStack<treeNode*> st;
+	while (p != NULL && p->data.first != theKey)
+	{
+		pp = p;
+		st.push(pp);
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return false;
+	if (p->leftChild != NULL && p->rightChild != NULL)
+	{
+		treeNode* s = p->leftChild;
+		treeNode* ps = p;
+		treeNode* newNode = new treeNode(s->data, p->balanceFactor, p->leftChild, p->rightChild);
+		st.push(newNode);
+		while (s->rightChild != NULL)
+		{
+			ps = s;
+			st.push(ps);
+			s = s->rightChild;
+		}
+		if (pp == NULL)
+			root = newNode;
+		else
+		{
+			if (pp->leftChild == p)
+				pp->leftChild = newNode;
+			else
+				pp->rightChild = newNode;
+		}
+		if (ps == p)
+			pp = newNode;
+		else
+			pp = ps;
+		delete p;
+		p = s;
+	}
+	treeNode* c = NULL;
+	if (p->leftChild != NULL)
+		c = p->leftChild;
+	else
+		c = p->rightChild;
+	bool leftOrRight = false;	//false implicates st.top()->leftChild == tmp and true means st.top()->rightChild == tmp.
+	if (pp == NULL)
+		root = c;
+	else
+	{
+		if (pp->leftChild == p)
+		{ 
+			pp->leftChild = c;
+			leftOrRight = false;
+		}
+		else
+		{
+			pp->rightChild = c;
+			leftOrRight = true;
+		}
+	}
+	delete p;
+	treeSize--;
+	if (treeSize == 0)
+	{
+		root = NULL;
+		return true;
+	}
+	bool isHeightChanged = true;
+	treeNode* tmp = c;
+	while (!st.empty() && isHeightChanged)
+	{
+		if (!leftOrRight)	//leftChild is deleted
+			(st.top()->balanceFactor)--;
+		else				//rightChild is deleted
+			(st.top()->balanceFactor)++;
+		isHeightChanged = false;
+		if (st.top()->balanceFactor == 0)
+			isHeightChanged = true;
+		else if (st.top()->balanceFactor == 2)
+		{
+			isHeightChanged = true;
+			treeNode* parentOfTop = NULL;
+			if (st.top() != root)
+			{
+				treeNode* t = st.top();
+				st.pop();
+				parentOfTop = st.top();
+				st.push(t);
+			}
+			treeNode*& operatingObj = (parentOfTop == NULL) ? (root) 
+				: ((parentOfTop->leftChild == st.top()) ? parentOfTop->leftChild : parentOfTop->rightChild);
+			if (st.top()->leftChild->balanceFactor == 0)
+			{ 
+				R0shift(operatingObj);
+				isHeightChanged = false;
+			}
+			else if (st.top()->leftChild->balanceFactor == 1)
+				R1shift(operatingObj);
+			else if (st.top()->leftChild->balanceFactor == -1)
+				R_1shift(operatingObj);
+			st.pop();
+			st.push(operatingObj);
+		}
+		else if (st.top()->balanceFactor == -2)
+		{
+			isHeightChanged = true;
+			treeNode* parentOfTop = NULL;
+			if (st.top() != root)
+			{
+				treeNode* t = st.top();
+				st.pop();
+				parentOfTop = st.top();
+				st.push(t);
+			}
+			treeNode*& operatingObj = (parentOfTop == NULL) ? (root)
+				: ((parentOfTop->leftChild == st.top()) ? parentOfTop->leftChild : parentOfTop->rightChild);
+			if (st.top()->rightChild->balanceFactor == 0)
+			{ 
+				L0shift(operatingObj);
+				isHeightChanged = false;
+			}
+			else if (st.top()->rightChild->balanceFactor == 1)
+				L1shift(operatingObj);
+			else if (st.top()->rightChild->balanceFactor == -1)
+				L_1shift(operatingObj);
+			st.pop();
+			st.push(operatingObj);
+		}
+		tmp = st.top();
+		st.pop();
+		if (!st.empty())
+			leftOrRight = (st.top()->leftChild == tmp) ? false : true;
+	}
+	if (treeSize == 0)
+		root = NULL;
+	return true;
+}
+
+template<typename K, typename E>
+void avlTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	if (treeSize == 0)
+		return;
+	arrayStack<treeNode*> s;
+	s.push(root);
+	visit = pf;
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty())
+		{
+			treeNode* tmp = s.top();
+			s.pop();
+			visit(tmp);
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+int avlTree<K, E>::Height(treeNode* X)
+{
+	if (X == NULL)
+		return 0;
+	int hl = Height(X->leftChild);
+	int hr = Height(X->rightChild);
+	return (hl >= hr ? hl : hr) + 1;
+}
+
+template<typename K, typename E>
+void displayKey(typename avlTree<K, E>::treeNode* theNode)
+{
+	if (theNode != NULL)
+		std::cout << theNode->data.first << "\t";
+}
