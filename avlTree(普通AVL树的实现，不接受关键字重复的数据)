@@ -28,9 +28,7 @@ public:
 	bool erase(const K& theKey);
 	void ascend(void(*pf)(treeNode*));
 
-private:
-	treeNode* root;
-	int treeSize;
+protected:
 	static void(*visit)(treeNode*);
 	static void LLshift(treeNode*& X);
 	static void LRshift(treeNode*& X);
@@ -43,6 +41,11 @@ private:
 	static void L1shift(treeNode*& X);
 	static void L_1shift(treeNode*& X);
 	static int Height(treeNode* X);
+
+private:
+	treeNode* root;
+	int treeSize;
+	
 };
 
 template<typename K, typename E>
@@ -361,14 +364,16 @@ bool avlTree<K, E>::erase(const K& theKey)
 	{
 		treeNode* s = p->leftChild;
 		treeNode* ps = p;
-		treeNode* newNode = new treeNode(s->data, p->balanceFactor, p->leftChild, p->rightChild);
-		st.push(newNode);
+		st.push(NULL);
+		treeNode*& ref = st.top();
 		while (s->rightChild != NULL)
 		{
 			ps = s;
 			st.push(ps);
 			s = s->rightChild;
 		}
+		treeNode* newNode = new treeNode(s->data, p->balanceFactor, p->leftChild, p->rightChild);
+		ref = newNode;
 		if (pp == NULL)
 			root = newNode;
 		else
@@ -479,8 +484,6 @@ bool avlTree<K, E>::erase(const K& theKey)
 		if (!st.empty())
 			leftOrRight = (st.top()->leftChild == tmp) ? false : true;
 	}
-	if (treeSize == 0)
-		root = NULL;
 	return true;
 }
 
