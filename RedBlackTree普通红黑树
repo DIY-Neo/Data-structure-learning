@@ -1,0 +1,495 @@
+#pragma once
+#include <iostream>
+#include "arrayQueue.h"
+#include "arrayStack.h"
+
+template<typename K, typename E>
+class RedBlackTree
+{
+protected:
+	enum { black, red };
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		short color;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode(const std::pair<const K, E>& d, short c = red, treeNode* lChild = NULL, treeNode* rChild = NULL)
+			:data(d), color(c), leftChild(lChild), rightChild(rChild) {}
+	};
+
+	RedBlackTree() :root(NULL), treeSize(0) {}
+	~RedBlackTree();
+
+	bool empty()const { return treeSize == 0; }
+	int size()const { return treeSize; }
+	int height()const { return Height(root); }
+	std::pair<const K, E>* find(const K& theKey);
+	void insert(const std::pair<const K, E>& thePair);
+	bool erase(const K& theKey);
+	void clear();
+	void ascend(void(*pf)(treeNode*));
+
+protected:
+	static void(*visit)(treeNode*);
+	static int Height(treeNode* X);
+
+private:
+	treeNode* root;
+	int treeSize;
+};
+
+template<typename K, typename E>
+void(*RedBlackTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+int RedBlackTree<K, E>::Height(treeNode* X)
+{
+	if (X == NULL)
+		return 0;
+	int hl = Height(X->leftChild);
+	int hr = Height(X->rightChild);
+	return (hl >= hr ? hl : hr) + 1;
+}
+
+template<typename K, typename E>
+RedBlackTree<K, E>::~RedBlackTree()
+{
+	if (treeSize == 0)
+		return;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* currNode = q.front();
+		if (currNode->leftChild != NULL)
+			q.push(currNode->leftChild);
+		if (currNode->rightChild != NULL)
+			q.push(currNode->rightChild);
+		delete currNode;
+		q.pop();
+	}
+}
+
+template<typename K, typename E>
+void RedBlackTree<K, E>::clear()
+{
+	if (treeSize == 0)
+		return;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* tmp = q.front();
+		if (tmp->leftChild != NULL)
+			q.push(tmp->leftChild);
+		if (tmp->rightChild != NULL)
+			q.push(tmp->rightChild);
+		delete tmp;
+		q.pop();
+	}
+	treeSize = 0;
+	root = NULL;
+}
+
+template<typename K, typename E>
+std::pair<const K, E>* RedBlackTree<K, E>::find(const K& theKey)
+{
+	treeNode* p = root;
+	while (p != NULL && theKey != p->data.first)
+	{
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return NULL;
+	else
+		return &(p->data);
+}
+
+template<typename K, typename E>
+void RedBlackTree<K, E>::insert(const std::pair<const K, E>& thePair)
+{
+	if (treeSize == 0)
+	{
+		root = new treeNode(thePair, black);
+		treeSize++;
+		return;
+	}
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayStack<treeNode*> s;
+	while (p != NULL && p->data.first != thePair.first)
+	{
+		pp = p;
+		s.push(pp);
+		if (thePair.first < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+	{
+		p->data.second = thePair.second;
+		return;
+	}
+	treeNode* newNode = new treeNode(thePair, red);
+	if (thePair.first < pp->data.first)
+		pp->leftChild = newNode;
+	else
+		pp->rightChild = newNode;
+	s.push(newNode);
+	treeSize++;
+	while (!s.empty())
+	{
+		treeNode* u = s.top();
+		treeNode* pu = NULL;
+		treeNode* gu = NULL;
+		s.pop();
+		if (u->color == red)
+		{ 
+			if (s.top()->color == red)
+			{
+				pu = s.top();
+				s.pop();
+				gu = s.top();
+			}
+			else
+				break;
+			treeNode* uu;
+			if (gu->leftChild == pu)
+				uu = gu->rightChild;
+			else
+				uu = gu->leftChild;
+			if (uu != NULL && uu->color == red)	//XYr
+			{
+				pu->color = black;
+				uu->color = black;
+				gu->color = red;
+				root->color = black;
+			}
+			else if (uu == NULL || uu->color == black)
+			{
+				treeNode* tmp = NULL;
+				s.pop();
+				if (!s.empty())
+					tmp = s.top();
+				s.push(gu);
+				treeNode*& operatingObj = (gu == root) ? (root) : 
+					((tmp->leftChild == gu) ? tmp->leftChild : tmp->rightChild);
+				if (gu->leftChild == pu && pu->leftChild == u)	//LLb
+				{
+					gu->leftChild = pu->rightChild;
+					pu->rightChild = gu;
+					pu->color = black;
+					gu->color = red;
+					operatingObj = pu;
+				}
+				else if (gu->leftChild == pu && pu->rightChild == u)	//LRb
+				{
+					pu->rightChild = u->leftChild;
+					gu->leftChild = u->rightChild;
+					u->leftChild = pu;
+					u->rightChild = gu;
+					gu->color = red;
+					u->color = black;
+					operatingObj = u;
+				}
+				else if (gu->rightChild == pu && pu->leftChild == u)	//RLb
+				{
+					gu->rightChild = u->leftChild;
+					pu->leftChild = u->rightChild;
+					u->leftChild = gu;
+					u->rightChild = pu;
+					gu->color = red;
+					u->color = black;
+					operatingObj = u;
+				}
+				else	//RRb
+				{
+					gu->rightChild = pu->leftChild;
+					pu->leftChild = gu;
+					gu->color = red;
+					pu->color = black;
+					operatingObj = pu;
+				}
+				s.pop();
+				s.push(operatingObj);
+			}
+		}
+	}
+}
+
+template<typename K, typename E>
+bool RedBlackTree<K, E>::erase(const K& theKey)
+{
+	if (treeSize == 0)
+		return false;
+	arrayStack<treeNode*> st;
+	treeNode* pp = NULL;
+	treeNode* p = root;
+	while (p != NULL && p->data.first != theKey)
+	{
+		pp = p;
+		st.push(pp);
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p == NULL)
+		return false;
+	if (p->leftChild != NULL && p->rightChild != NULL)
+	{
+		treeNode* s = p->leftChild;
+		treeNode* ps = p;
+		st.push(NULL);
+		treeNode*& ref = st.top();
+		while (s->rightChild != NULL)
+		{
+			ps = s;
+			st.push(ps);
+			s = s->rightChild;
+		}
+		treeNode* newNode = new treeNode(s->data, p->color, p->leftChild, p->rightChild);
+		ref = newNode;
+		if (pp == NULL)
+			root = newNode;
+		else
+		{
+			if (pp->leftChild == p)
+				pp->leftChild = newNode;
+			else
+				pp->rightChild = newNode;
+		}
+		if (ps == p)
+			pp = newNode;
+		else
+			pp = ps;
+		delete p;
+		p = s;
+	}
+	treeNode* c = NULL;
+	if (p->leftChild != NULL)
+		c = p->leftChild;
+	else
+		c = p->rightChild;
+	if (pp == NULL)
+		root = c;
+	else
+	{
+		if (pp->leftChild == p)
+			pp->leftChild = c;
+		else
+			pp->rightChild = c;
+	}
+	bool isDeletedBlack = (p->color == black) ? true : false;
+	delete p;
+	treeSize--;
+	if (treeSize == 0)
+	{
+		root = NULL;
+		return true;
+	}
+	while (!st.empty() && isDeletedBlack)		//first run
+	{
+		isDeletedBlack = false;
+		treeNode* pc = st.top();
+		st.pop();
+		treeNode*& operatingObj = st.empty() ? root : 
+			(pc == st.top()->leftChild ? st.top()->leftChild : st.top()->rightChild);
+		if (pc->rightChild == c)	//R
+		{
+			treeNode* v = pc->leftChild;
+			if (v->color == black)		//Rb
+			{
+				if ((v->leftChild == NULL || v->leftChild->color == black) &&
+					(v->rightChild == NULL || v->rightChild->color == black))	//Rb0
+				{
+					if (pc->color == black && pc != root)	//pc != root may be deleted
+						isDeletedBlack = true;
+					pc->color = black;
+					v->color = red;
+				}
+				else if ((v->leftChild != NULL && v->leftChild->color == red) &&
+					(v->rightChild == NULL || v->rightChild->color == black))//Rb1_i
+				{
+					int tempColor = pc->color;
+					pc->leftChild = v->rightChild;
+					v->rightChild = pc;
+					v->color = tempColor;
+					pc->color = black;
+					v->leftChild->color = black;
+					operatingObj = v;
+				}
+				else		//Rb1_ii and Rb2
+				{
+					treeNode* w = v->rightChild;
+					int tempColor = pc->color;
+					v->rightChild = w->leftChild;
+					w->leftChild = v;
+					pc->leftChild = w->rightChild;
+					w->rightChild = pc;
+					w->color = tempColor;
+					pc->color = black;
+					v->color = black;
+					operatingObj = w;
+				}
+			}
+			else						//Rr
+			{
+				treeNode* w = v->rightChild;
+				if ((w->leftChild == NULL || w->leftChild->color == black) && 
+					(w->rightChild == NULL || w->rightChild->color == black))	//Rr0
+				{
+					pc->leftChild = w;
+					v->rightChild = pc;
+					v->color = black;
+					w->color = red;
+					operatingObj = v;
+				}
+				else if ((w->leftChild != NULL && w->leftChild->color == red) &&
+					(w->rightChild == NULL || w->rightChild->color == black))	//Rr1_i
+				{
+					v->rightChild = w->leftChild;
+					w->leftChild = v;
+					pc->leftChild = w->rightChild;
+					w->rightChild = pc;
+					v->rightChild->color = black;
+					operatingObj = w;
+				}
+				else					//Rr1_ii and Rr
+				{
+					treeNode* x = w->rightChild;
+					v->rightChild = w->leftChild;
+					w->leftChild = v;
+					w->rightChild = x->leftChild;
+					x->leftChild = w;
+					pc->leftChild = x->rightChild;
+					x->rightChild = pc;
+					w->leftChild = v->rightChild;
+					v->rightChild = w;
+					x->leftChild = v;
+					x->color = black;
+					operatingObj = x;
+				}
+			}
+		}
+		else				//L
+		{
+			treeNode* v = pc->rightChild;
+			if (v->color == black)		//Lb
+			{
+				if ((v->leftChild == NULL || v->leftChild->color == black) &&
+					(v->rightChild == NULL || v->rightChild->color == black))	//Lb0
+				{
+					if (pc->color == black && pc != root)
+						isDeletedBlack = true;
+					pc->color = black;
+					v->color = red;
+				}
+				else if ((v->leftChild == NULL || v->leftChild->color == black) &&
+					(v->rightChild != NULL && v->rightChild->color == red))		//Lb1_i
+				{
+					int tempColor = pc->color;
+					pc->rightChild = v->leftChild;
+					v->leftChild = pc;
+					v->color = tempColor;
+					pc->color = black;
+					v->rightChild->color = black;
+					operatingObj = v;
+				}
+				else							//Lb1_ii and Lb2
+				{
+					treeNode* w = v->leftChild;
+					int tempColor = pc->color;
+					v->leftChild = w->rightChild;
+					w->rightChild = v;
+					pc->rightChild = w->leftChild;
+					w->leftChild = pc;
+					w->color = tempColor;
+					pc->color = black;
+					v->color = black;
+					operatingObj = w;
+				}
+			}
+			else						//Lr
+			{
+				treeNode* w = v->leftChild;
+				if ((w->leftChild == NULL || w->leftChild->color == black) &&
+					(w->rightChild == NULL || w->rightChild->color == black))	//Lr0
+				{
+					pc->rightChild = v->leftChild;
+					v->leftChild = pc;
+					w->color = red;
+					v->color = black;
+					operatingObj = v;
+				}
+				else if ((w->leftChild == NULL || w->leftChild->color == black) &&
+					(w->rightChild != NULL && w->rightChild->color == red))		//Lr1_i
+				{
+					v->leftChild = w->rightChild;
+					w->rightChild = v;
+					pc->rightChild = w->leftChild;
+					w->leftChild = pc;
+					v->leftChild->color = black;
+					operatingObj = w;
+				}
+				else					//Lr1_ii and Lr2
+				{
+					treeNode* x = w->leftChild;
+					v->leftChild = w->rightChild;
+					w->rightChild = v;
+					w->leftChild = x->rightChild;
+					x->rightChild = w;
+					pc->rightChild = x->leftChild;
+					x->leftChild = pc;
+					w->rightChild = v->leftChild;
+					v->leftChild = w;
+					x->rightChild = v;
+					x->color = black;
+					operatingObj = x;
+				}
+			}
+		}
+		c = operatingObj;
+	}
+	return true;
+}
+
+template<typename K, typename E>
+void RedBlackTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	if (treeSize == 0)
+		return;
+	arrayStack<treeNode*> s;
+	s.push(root);
+	visit = pf;
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty())
+		{
+			treeNode* tmp = s.top();
+			s.pop();
+			visit(tmp);
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+void displayKey(typename RedBlackTree<K, E>::treeNode* theNode)
+{
+	if (theNode != NULL)
+		std::cout << theNode->data.first << "\t";
+}
