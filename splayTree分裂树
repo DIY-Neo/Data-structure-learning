@@ -1,0 +1,414 @@
+#pragma once
+#include "arrayQueue.h"
+#include "arrayStack.h"
+#include <iostream>
+
+template<typename K, typename E>
+class splayTree
+{
+public:
+	struct treeNode
+	{
+		std::pair<const K, E> data;
+		treeNode* leftChild;
+		treeNode* rightChild;
+		treeNode(const std::pair<const K, E>& dat, treeNode* lC = NULL, treeNode* rC = NULL)
+			:data(dat), leftChild(lC), rightChild(rC) {}
+	};
+
+	splayTree() :root(NULL), treeSize(0) {}
+	~splayTree();
+
+	bool empty()const { return treeSize == 0; }
+	int size()const { return treeSize; }
+	int height()const { return Height(root); }
+	void clear();
+	std::pair<const K, E>* find(const K& theKey);
+	void insert(const std::pair<const K, E>& thePair);
+	bool erase(const K& theKey);
+	void ascend(void(*pf)(treeNode*));
+
+protected:
+	static void(*visit)(treeNode*);
+	static int Height(treeNode* X);
+	static void dualSlay(treeNode* u, treeNode* pu, treeNode*& guOp);
+	static void soloSlay(treeNode* u, treeNode*& puOp);
+
+private:
+	treeNode* root;
+	int treeSize;
+
+};
+
+template<typename K, typename E>
+void(*splayTree<K, E>::visit)(treeNode*);
+
+template<typename K, typename E>
+int splayTree<K, E>::Height(treeNode* X)
+{
+	if (X == NULL)
+		return 0;
+	int hl = Height(X->leftChild);
+	int hr = Height(X->rightChild);
+	return (hl > hr ? hl : hr) + 1;
+}
+
+template<typename K, typename E>
+splayTree<K, E>::~splayTree()
+{
+	if (treeSize == 0)
+		return;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* temp = q.front();
+		q.pop();
+		if (temp->leftChild != NULL)
+			q.push(temp->leftChild);
+		if (temp->rightChild != NULL)
+			q.push(temp->rightChild);
+		delete temp;
+	}
+}
+
+template<typename K, typename E>
+void splayTree<K, E>::clear()
+{
+	if (treeSize == 0)
+		return;
+	arrayQueue<treeNode*> q;
+	q.push(root);
+	while (!q.empty())
+	{
+		treeNode* temp = q.front();
+		q.pop();
+		if (temp->leftChild != NULL)
+			q.push(temp->leftChild);
+		if (temp->rightChild != NULL)
+			q.push(temp->rightChild);
+		delete temp;
+	}
+	root = NULL;
+	treeSize = 0;
+}
+
+template<typename K, typename E>
+void splayTree<K, E>::ascend(void(*pf)(treeNode*))
+{
+	if (treeSize == 0)
+		return;
+	arrayStack<treeNode*> s;
+	s.push(root);
+	visit = pf;
+	while (!s.empty())
+	{
+		while (s.top()->leftChild != NULL)
+			s.push(s.top()->leftChild);
+		while (!s.empty() && s.top()->rightChild == NULL)
+		{
+			visit(s.top());
+			s.pop();
+		}
+		if (!s.empty())
+		{
+			treeNode* tmp = s.top();
+			s.pop();
+			visit(tmp);
+			s.push(tmp->rightChild);
+		}
+	}
+}
+
+template<typename K, typename E>
+void splayTree<K, E>::dualSlay(treeNode* u, treeNode* pu, treeNode*& guOp)
+{
+	//test code begin
+	if ((guOp->leftChild != pu && guOp->rightChild != pu) || (pu->leftChild != u && pu->rightChild != u))
+		throw "wrong!";
+	if (guOp == NULL || pu == NULL || u == NULL)
+		throw "Wrong!";
+	//test code end
+	treeNode* gu = guOp;
+	if (gu->leftChild == pu)
+	{
+		if (pu->leftChild == u)	//LL
+		{
+			gu->leftChild = pu->rightChild;
+			pu->rightChild = gu;
+			pu->leftChild = u->rightChild;
+			u->rightChild = pu;
+		}
+		else					//LR
+		{
+			pu->rightChild = u->leftChild;
+			u->leftChild = pu;
+			gu->leftChild = u->rightChild;
+			u->rightChild = gu;
+		}
+	}
+	else
+	{
+		if (pu->leftChild == u)	//RL
+		{
+			pu->leftChild = u->rightChild;
+			u->rightChild = pu;
+			gu->rightChild = u->leftChild;
+			u->leftChild = gu;
+		}
+		else					//RR
+		{
+			gu->rightChild = pu->leftChild;
+			pu->leftChild = gu;
+			pu->rightChild = u->leftChild;
+			u->leftChild = pu;
+		}
+	}
+	guOp = u;
+}
+
+template<typename K, typename E>
+void splayTree<K, E>::soloSlay(treeNode* u, treeNode*& puOp)
+{
+	//test code begin
+	if (puOp->leftChild != u && puOp->rightChild != u)
+		throw "wrong!";
+	if (puOp == NULL || u == NULL)
+		throw "Wrong!";
+	//test code end
+	treeNode* pu = puOp;
+	if (pu->leftChild == u)	//L
+	{
+		pu->leftChild = u->rightChild;
+		u->rightChild = pu;
+	}
+	else					//R
+	{
+		pu->rightChild = u->leftChild;
+		u->leftChild = pu;
+	}
+	puOp = u;
+}
+
+template<typename K, typename E>
+std::pair<const K, E>* splayTree<K, E>::find(const K& theKey)
+{
+	if (treeSize == 0)
+		return NULL;
+	treeNode* p = root;
+	treeNode* pp = NULL;
+	arrayStack<treeNode*> s;
+	while (p != NULL && p->data.first != theKey)
+	{
+		pp = p;
+		s.push(pp);
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+		s.push(p);
+	treeNode* slayNode = NULL;
+	if (!s.empty())
+	{
+		slayNode = s.top();
+		s.pop();
+	}
+	while (!s.empty())
+	{
+		if (s.size() > 1)
+		{
+			treeNode* pSlayNode = s.top();
+			s.pop();
+			treeNode* gSlayNode = s.top();
+			s.pop();
+			treeNode*& operatingObj = s.empty() ? root :
+				(s.top()->leftChild == gSlayNode ? s.top()->leftChild : s.top()->rightChild);
+			dualSlay(slayNode, pSlayNode, operatingObj);
+		}
+		else
+		{
+			treeNode* pSlayNode = s.top();
+			s.pop();
+			treeNode*& operatingObj = s.empty() ? root :
+				(s.top()->leftChild == pSlayNode ? s.top()->leftChild : s.top()->rightChild);
+			soloSlay(slayNode, operatingObj);
+		}
+	}
+	if (p == NULL)
+		return NULL;
+	else
+		return &p->data;
+}
+
+template<typename K, typename E>
+void splayTree<K, E>::insert(const std::pair<const K, E>& thePair)
+{
+	if (treeSize == 0)
+	{
+		root = new treeNode(thePair);
+		treeSize++;
+		return;
+	}
+	treeNode* pp = NULL;
+	treeNode* p = root;
+	arrayStack<treeNode*> s;
+	while (p != NULL && thePair.first != p->data.first)
+	{
+		pp = p;
+		s.push(pp);
+		if (thePair.first < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+	{
+		p->data.second = thePair.second;
+		s.push(p);
+	}
+	else
+	{
+		treeNode* newNode = new treeNode(thePair);
+		treeSize++;
+		if (newNode->data.first < pp->data.first)
+			pp->leftChild = newNode;
+		else
+			pp->rightChild = newNode;
+		s.push(newNode);
+	}
+	treeNode* slayNode = NULL;
+	if (!s.empty())
+	{
+		slayNode = s.top();
+		s.pop();
+	}
+	while (!s.empty())
+	{
+		if (s.size() > 1)
+		{
+			treeNode* pSlayNode = s.top();
+			s.pop();
+			treeNode* gSlayNode = s.top();
+			s.pop();
+			treeNode*& operatingObj = s.empty() ? root :
+				(s.top()->leftChild == gSlayNode ? s.top()->leftChild : s.top()->rightChild);
+			dualSlay(slayNode, pSlayNode, operatingObj);
+		}
+		else
+		{
+			treeNode* pSlayNode = s.top();
+			s.pop();
+			treeNode*& operatingObj = s.empty() ? root :
+				(s.top()->leftChild == pSlayNode ? s.top()->leftChild : s.top()->rightChild);
+			soloSlay(slayNode, operatingObj);
+		}
+	}
+}
+
+template<typename K, typename E>
+bool splayTree<K, E>::erase(const K& theKey)
+{
+	if (treeSize == 0)
+		return false;
+	treeNode* pp = NULL;
+	treeNode* p = root;
+	arrayStack<treeNode*> st;
+	while (p != NULL && theKey != p->data.first)
+	{
+		pp = p;
+		st.push(pp);
+		if (theKey < p->data.first)
+			p = p->leftChild;
+		else
+			p = p->rightChild;
+	}
+	if (p != NULL)
+	{ 
+		if (p->leftChild != NULL && p->rightChild != NULL)
+		{
+			treeNode* s = p->leftChild;
+			treeNode* ps = p;
+			st.push(NULL);
+			treeNode*& ref = st.top();
+			while (s->rightChild != NULL)
+			{
+				ps = s;
+				st.push(ps);
+				s = s->rightChild;
+			}
+			treeNode* newNode = new treeNode(s->data, p->leftChild, p->rightChild);
+			ref = newNode;
+			if (pp == NULL)
+				root = newNode;
+			else
+			{
+				if (pp->leftChild == p)
+					pp->leftChild = newNode;
+				else
+					pp->rightChild = newNode;
+			}
+			if (ps == p)
+				pp = newNode;
+			else
+				pp = ps;
+			delete p;
+			p = s;
+		}
+		treeNode* c = NULL;
+		if (p->leftChild != NULL)
+			c = p->leftChild;
+		else
+			c = p->rightChild;
+		if (pp == NULL)
+			root = c;
+		else
+		{
+			if (pp->leftChild == p)
+				pp->leftChild = c;
+			else
+				pp->rightChild = c;
+		}
+		delete p;
+		treeSize--;
+	}
+	treeNode* slayNode = NULL;
+	if(!st.empty())
+	{ 
+		slayNode = st.top();
+		st.pop();
+	}
+	while (!st.empty())
+	{
+		if (st.size() > 1)
+		{
+			treeNode* pSlayNode = st.top();
+			st.pop();
+			treeNode* gSlayNode = st.top();
+			st.pop();
+			treeNode*& operatingObj = st.empty() ? root :
+				(st.top()->leftChild == gSlayNode ? st.top()->leftChild : st.top()->rightChild);
+			dualSlay(slayNode, pSlayNode, operatingObj);
+		}
+		else
+		{
+			treeNode* pSlayNode = st.top();
+			st.pop();
+			treeNode*& operatingObj = st.empty() ? root :
+				(st.top()->leftChild == pSlayNode ? st.top()->leftChild : st.top()->rightChild);
+			soloSlay(slayNode, operatingObj);
+		}
+	}
+	if (p == NULL)
+		return false;
+	else
+		return true;
+}
+
+template<typename K, typename E>
+void displayKey(typename splayTree<K, E>::treeNode* theNode)
+{
+	if (theNode != NULL)
+		std::cout << theNode->data.first << "\t";
+}
